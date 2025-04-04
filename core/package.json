@@ -1,0 +1,26 @@
+{
+  "name": "@odin/core",
+  "license": "MIT",
+  "scripts": {
+    "migrate": "yarn knex migrate:latest",
+    "rollback": "yarn knex migrate:rollback --all"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.2"
+  },
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e",
+  "dependencies": {
+    "@fastify/autoload": "^6.2.0",
+    "@fastify/sensible": "^6.0.3",
+    "@mikro-orm/core": "^6.4.11",
+    "@mikro-orm/postgresql": "^6.4.11",
+    "@mikro-orm/reflection": "^6.4.11",
+    "dotenv": "^16.4.7",
+    "fastify": "^5.2.2",
+    "fastify-plugin": "^5.0.1",
+    "knex": "^3.1.0",
+    "pg": "^8.14.1"
+  }
+}
