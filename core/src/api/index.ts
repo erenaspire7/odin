@@ -1,13 +1,12 @@
 import * as path from "path";
 import { FastifyInstance } from "fastify";
 import AutoLoad from "@fastify/autoload";
+import { verifySignature } from "./middleware/verifySignature";
 
 /* eslint-disable-next-line */
 export interface AppOptions {}
 
 export async function app(fastify: FastifyInstance, opts: AppOptions) {
-  // Do not touch the following lines
-
   // This loads all plugins defined in plugins
   // those should be support plugins that are reused
   // through your application
@@ -19,7 +18,20 @@ export async function app(fastify: FastifyInstance, opts: AppOptions) {
   // This loads all plugins defined in routes
   // define your routes in one of these
   fastify.register(AutoLoad, {
-    dir: path.join(__dirname, "routes"),
-    options: { ...opts, prefix: "/api" },
+    dir: path.join(__dirname, "routes/public"),
+    options: { ...opts, prefix: "/api/public" },
   });
+
+  fastify.register(
+    async (protectedApp) => {
+      // Apply the middleware only within this context
+      protectedApp.addHook("preHandler", verifySignature);
+
+      protectedApp.register(AutoLoad, {
+        dir: path.join(__dirname, "routes/protected"),
+        options: { ...opts },
+      });
+    },
+    { prefix: "/api/v1" },
+  );
 }

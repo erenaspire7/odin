@@ -1,5 +1,5 @@
 import { Entity, PrimaryKey, Property, DateTimeType } from "@mikro-orm/core";
-import { UserRepository } from "./../repository";
+import { UserRepository } from "@odin/core/db";
 
 @Entity({ repository: () => UserRepository })
 export class User {

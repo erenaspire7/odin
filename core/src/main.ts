@@ -1,7 +1,7 @@
 import Fastify from "fastify";
-import { MikroORM, RequestContext } from "@mikro-orm/core";
-import { initMikroORM } from "./db";
-import { app } from "./app";
+import { RequestContext } from "@mikro-orm/core";
+import { initMikroORM } from "@odin/core/db";
+import { app } from "./api";
 import dotenv from "dotenv";
 dotenv.config();
 

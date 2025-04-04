@@ -1,8 +1,9 @@
 import { RequestContext } from "@mikro-orm/core";
-import { User } from "./../../db/entity";
-import { UserRepository } from "./../../db/repository";
+import { User, UserRepository } from "@odin/core/db";
+import { isAddress } from "ethers";
+import { RegisterUserPayload } from "@odin/core/types";
 
-class UserService {
+export class UserService {
   private readonly userRepository: UserRepository;
 
   constructor() {
@@ -10,7 +11,13 @@ class UserService {
       RequestContext.getEntityManager()!.getRepository(User);
   }
 
-  async register(payload: any) {
-    // validations
+  async register(payload: RegisterUserPayload) {
+    const { walletAddress } = payload;
+
+    if (!isAddress(walletAddress)) {
+      throw new Error("Invalid wallet address");
+    }
+
+    return this.userRepository.createUser(payload);
   }
 }

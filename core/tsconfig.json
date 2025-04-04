@@ -6,9 +6,13 @@
     "strict": true,
     "outDir": "dist",
     "declaration": true,
-    "experimentalDecorators": true
+    "experimentalDecorators": true,
+    "paths": {
+      "@odin/core/utils": ["./src/utils/index.ts"],
+      "@odin/core/db": ["./src/db/index.ts"],
+      "@odin/core/services": ["./src/services/index.ts"],
+      "@odin/core/types": ["./src/shared/types/index.ts"]
+    }
   },
-  "include": [
-    "./src/**/*.ts"
-  ]
+  "include": ["./src/**/*.ts"]
 }
