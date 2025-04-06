@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import orchestrateSchema from "./schema.json";
 import {
-  AgenticResponse,
+  AgenticResponseType,
   BountyExpectedOutput,
   EvaluationCriteria,
   Orchestration,
@@ -13,6 +13,7 @@ import {
 import fs from "fs";
 import _ from "lodash";
 import { randomUUID } from "crypto";
+import { validateSchema } from "@odin/core/utils";
 
 export class LLMJudgeService {
   private client: Anthropic;
@@ -111,7 +112,9 @@ export class LLMJudgeService {
       // @ts-ignore
       const [orchestrationSteps] = llmOutput.input;
 
-      // validate edges
+      if (!validateSchema(orchestrateSchema, orchestrationSteps)) {
+        throw new Error("Invalid LLM Output");
+      }
 
       // save to db
       fs.writeFileSync("data.json", JSON.stringify(orchestrationSteps));
@@ -187,12 +190,9 @@ export class LLMJudgeService {
 
   async executeEvaluation(
     orchestrationSteps: Orchestration,
-    agenticResponse: AgenticResponse,
-    expectedOutput: BountyExpectedOutput,
+    agenticResponse: AgenticResponseType,
   ) {
     const { finalAnswer } = agenticResponse;
-
-    // validate to match expectedOutput
 
     const { graph } = orchestrationSteps;
     const { nodes, edges } = graph;
@@ -207,7 +207,7 @@ export class LLMJudgeService {
       if (!node) {
         throw new Error("Internal Server Error");
       }
-      
+
       payload = await this.executeNode(node!, payload);
     }
   }
@@ -342,6 +342,11 @@ export class LLMJudgeService {
           if (llmOutput.length > 0) {
             // @ts-ignore
             const [analysis] = llmOutput.input;
+            
+            if (!validateSchema(JSON.parse(output_schema), analysis)) {
+              throw new Error("Invalid LLM Output");
+            }
+            
             // save to db - potentially explore alternative pattern to prevent duplicate invocations
             fs.writeFileSync(`analysis-${index}`, JSON.stringify(analysis));
 
@@ -395,6 +400,11 @@ export class LLMJudgeService {
       // @ts-ignore
       const [result] = llmOutput.input;
       // save to db - potentially explore alternative pattern to prevent duplicate invocations
+      
+      if (!validateSchema(JSON.parse(output_schema), result)) {
+        throw new Error("Invalid LLM Output");
+      }
+      
       fs.writeFileSync(`executor-${randomUUID()}`, JSON.stringify(result));
 
       payload = {

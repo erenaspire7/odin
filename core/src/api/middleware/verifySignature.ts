@@ -5,7 +5,7 @@ import type {
 } from "fastify";
 import { verifyMessage } from "ethers";
 import { z } from "zod";
-import { AuthHeadersSchema, AuthMessageSchema } from "@odin/core/utils";
+import { AuthHeadersSchema, AuthMessageSchema } from "@odin/core/types";
 
 export const verifySignature = (
   request: FastifyRequest,
@@ -13,9 +13,9 @@ export const verifySignature = (
   done: HookHandlerDoneFunction,
 ) => {
   try {
-    const { userAddress, signature } = AuthHeadersSchema.parse(request.headers);
+    const { walletAddress, signature } = AuthHeadersSchema.parse(request.headers);
 
-    const message = verifyMessage(userAddress, signature);
+    const message = verifyMessage(walletAddress, signature);
 
     if (!message) {
       return reply.status(400).send({ error: "Invalid signature" });

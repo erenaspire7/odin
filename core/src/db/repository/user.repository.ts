@@ -10,4 +10,8 @@ export class UserRepository extends EntityRepository<User> {
 
     return user;
   }
+  
+  async getUser(walletAddress: string) {
+    return this.findOne({ walletAddress });
+  }
 }

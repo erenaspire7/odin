@@ -1,13 +1,16 @@
 import { LLMJudgeService } from "@odin/core/services";
 
-import { EvaluationCriteriaType } from "@odin/core/types";
+import {
+  EvaluationCriteriaTypeEnum,
+  BountyExpectedOutputFormatEnum,
+} from "@odin/core/types";
 
 const scenarios = [
   {
     name: "Market Sentiment Analysis",
     description: `Create an AI agent that analyzes financial news articles to determine market sentiment toward specific stocks or sectors. The agent should process multiple news sources, extract sentiment signals, and provide actionable insights for traders.`,
     expectedOutput: {
-      format: "json",
+      format: BountyExpectedOutputFormatEnum.parse("json"),
       schema: {
         type: "object",
         properties: {
@@ -119,7 +122,7 @@ const scenarios = [
       },
     },
     evaluationCriteria: {
-      type: EvaluationCriteriaType.Automated,
+      type: EvaluationCriteriaTypeEnum.parse("automated"),
       criteria: "Correlation with Actual Market Movements",
     },
     stubResponse: {
@@ -196,10 +199,10 @@ const main = async () => {
 
   const { evaluationCriteria, expectedOutput, stubResponse } = scenarios[0];
 
-  // await llmJudgeService.orchestrateAgenticEvaluation(
-  //   evaluationCriteria,
-  //   expectedOutput,
-  // );
+  await llmJudgeService.orchestrateAgenticEvaluation(
+    evaluationCriteria,
+    expectedOutput,
+  );
 
   // await llmJudgeService.executeWebSearch(
   //   {

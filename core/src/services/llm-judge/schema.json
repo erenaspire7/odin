@@ -6,7 +6,7 @@
   "required": ["graph"],
   "properties": {
     "graph": {
-      "type": "object",
+      "type": "object", 
       "required": ["nodes", "edges"],
       "properties": {
         "nodes": {

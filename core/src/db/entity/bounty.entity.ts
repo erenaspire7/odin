@@ -11,9 +11,12 @@ import {
   BountyExpectedOutput,
   BountyStatus,
   BountyType,
+  BountyEvaluationCriteria,
+  BountyPrize,
 } from "@odin/core/types";
+import { BountyRepository } from "@odin/core/db";
 
-@Entity()
+@Entity({ repository: () => BountyRepository })
 export class Bounty {
   @PrimaryKey({ type: "uuid", defaultRaw: "uuid_generate_v1mc()" })
   bountyId!: string;
@@ -40,7 +43,10 @@ export class Bounty {
   expectedOutput: BountyExpectedOutput;
 
   @Property({ type: JsonType, nullable: false })
-  prize: any; // define type
+  evaluationCriteria: BountyEvaluationCriteria;
+
+  @Property({ type: JsonType, nullable: false })
+  prize: BountyPrize;
 
   @Property({ type: "string", nullable: false })
   type: BountyType;
@@ -53,8 +59,9 @@ export class Bounty {
     description: string,
     creator: User,
     expiresAt: Date,
-    expectedOutput: any,
-    prize: any,
+    expectedOutput: BountyExpectedOutput,
+    evaluationCriteria: BountyEvaluationCriteria,
+    prize: BountyPrize,
     type: BountyType,
     status: BountyStatus,
   ) {
@@ -63,6 +70,7 @@ export class Bounty {
     this.creator = creator;
     this.expiresAt = expiresAt;
     this.expectedOutput = expectedOutput;
+    this.evaluationCriteria = evaluationCriteria;
     this.prize = prize;
     this.type = type;
     this.status = status;

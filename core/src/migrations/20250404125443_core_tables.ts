@@ -24,6 +24,7 @@ export async function up(knex: Knex): Promise<void> {
       table.timestamp("updatedAt").notNullable().defaultTo(knex.fn.now());
       table.timestamp("expiresAt").notNullable();
       table.jsonb("expectedOutput").notNullable();
+      table.jsonb("evaluationCriteria").notNullable()
       table.jsonb("prize").notNullable();
 
       // type - sponsored / community

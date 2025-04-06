@@ -1,14 +1,14 @@
 import { FastifyInstance } from "fastify";
-import { AuthHeadersSchema, AuthMessageSchema } from "@odin/core/utils";
+import { AuthHeadersSchema } from "@odin/core/types";
 import { UserService } from "@odin/core/services";
 
 export default async function (fastify: FastifyInstance) {
+  const userService = new UserService();
+
   fastify.post("/register", async (request, reply) => {
-    const { userAddress } = AuthHeadersSchema.parse(request.headers);
+    const { walletAddress } = AuthHeadersSchema.parse(request.headers);
 
-    const userService = new UserService();
-
-    await userService.register({ walletAddress: userAddress });
+    await userService.register({ walletAddress });
 
     reply.status(201).send();
   });

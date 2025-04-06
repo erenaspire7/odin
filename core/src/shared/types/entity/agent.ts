@@ -1,47 +1,64 @@
-export interface AgenticResponse {
-  agentId: string;
-  bountyId: string;
-  timestamp: number;
-  // should match expected output
-  finalAnswer: any;
-  confidenceScore: number;
-  // easy to modify so not sure
-  executionMetrics: ExecutionMetrics;
-  chainOfThought: ChainOfThought;
-  metadata?: Record<string, any>;
-}
+import { z } from "zod";
 
-interface ExecutionMetrics {
-  totalTime: number;
-  stepCount: number;
-}
+// Defining the EdgeRelationship enum in Zod
+const EdgeRelationshipEnum = z.enum([
+  "follows",
+  "depends_on",
+  "alternative_to",
+  "supports",
+  "contradicts",
+]);
 
-interface GraphNode {
-  id: string;
-  type: string;
-  description: string;
-  content: string;
-  edges: Edge[];
-  metadata?: Record<string, any>;
-}
+// Edge schema
+const EdgeSchema = z.object({
+  sourceId: z.string(),
+  targetId: z.string(),
+  relationship: EdgeRelationshipEnum,
+  weight: z.number().optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
+});
 
-interface Edge {
-  sourceId: string; // The current node
-  targetId: string; // The connected node
-  relationship: EdgeRelationship;
-  weight?: number; // Optional: strength/importance
-  metadata?: Record<string, any>; // For any edge-specific data
-}
+// GraphNode schema
+const GraphNodeSchema = z.object({
+  id: z.string(),
+  type: z.string(),
+  description: z.string(),
+  content: z.string(),
+  edges: z.array(EdgeSchema),
+  metadata: z.record(z.string(), z.any()).optional(),
+});
 
-enum EdgeRelationship {
-  FOLLOWS = "follows", // Sequential step
-  DEPENDS_ON = "depends_on", // Requires output from another node
-  ALTERNATIVE_TO = "alternative_to", // Represents different reasoning paths
-  SUPPORTS = "supports", // Provides evidence for another node
-  CONTRADICTS = "contradicts", // Challenges another node
-}
+// ChainOfThought schema
+const ChainOfThoughtSchema = z.object({
+  format: z.string(),
+  nodes: z.array(GraphNodeSchema),
+});
 
-interface ChainOfThought {
-  format: string;
-  nodes: GraphNode[];
-}
+// ExecutionMetrics schema
+const ExecutionMetricsSchema = z.object({
+  totalTime: z.number(),
+  stepCount: z.number(),
+});
+
+// AgenticResponse schema
+export const AgenticResponseSchema = z.object({
+  agentId: z.string(),
+  timestamp: z.number(),
+  finalAnswer: z.any(),
+  confidenceScore: z.number(),
+  executionMetrics: ExecutionMetricsSchema,
+  chainOfThought: ChainOfThoughtSchema,
+  metadata: z.record(z.string(), z.any()).optional(),
+});
+
+export const AgenticResponseHeaderSchema = z.object({
+  signature: z.string(),
+});
+
+// Inferred types will match your original interfaces
+export type AgenticResponseType = z.infer<typeof AgenticResponseSchema>;
+// type ExecutionMetricsType = z.infer<typeof ExecutionMetricsSchema>;
+// type ChainOfThoughtType = z.infer<typeof ChainOfThoughtSchema>;
+// type GraphNodeType = z.infer<typeof GraphNodeSchema>;
+// type EdgeType = z.infer<typeof EdgeSchema>;
+// type EdgeRelationshipType = z.infer<typeof EdgeRelationshipEnum>;

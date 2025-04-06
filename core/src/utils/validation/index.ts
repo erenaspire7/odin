@@ -1,10 +1,18 @@
-import { z } from "zod";
+import { Draft, draft2019Config, draft07Config } from "json-schema-library";
 
-export const AuthHeadersSchema = z.object({
-  userAddress: z.string().min(1),
-  signature: z.string().min(1),
-});
+export const validateSchema = (schema: any, data: any): boolean => {
+  const { $schema } = schema;
 
-export const AuthMessageSchema = z.object({
-  expiresAt: z.string().datetime(), // ISO 8601 date string
-});
+  let validator;
+
+  switch ($schema) {
+    case "http://json-schema.org/draft-07/schema#":
+      validator = new Draft(draft07Config, schema);
+      break;
+    default:
+      validator = new Draft(draft2019Config, schema);
+      break;
+  }
+
+  return validator.isValid(data);
+};

@@ -7,8 +7,9 @@ import {
 } from "@mikro-orm/core";
 import { Bounty } from "./bounty.entity";
 import { User } from "./user.entity";
+import { AgentRepository } from "@odin/core/db";
 
-@Entity()
+@Entity({ repository: () => AgentRepository })
 export class Agent {
   @PrimaryKey({ type: "uuid", defaultRaw: "uuid_generate_v1mc()" })
   agentId!: string;
