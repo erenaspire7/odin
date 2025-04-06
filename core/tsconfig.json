@@ -12,7 +12,8 @@
       "@odin/core/db": ["./src/db/index.ts"],
       "@odin/core/services": ["./src/services/index.ts"],
       "@odin/core/types": ["./src/shared/types/index.ts"]
-    }
+    },
+    "resolveJsonModule": true
   },
   "include": ["./src/**/*.ts"]
 }

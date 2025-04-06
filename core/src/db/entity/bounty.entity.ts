@@ -7,6 +7,11 @@ import {
   ManyToOne,
 } from "@mikro-orm/core";
 import { User } from "./user.entity";
+import {
+  BountyExpectedOutput,
+  BountyStatus,
+  BountyType,
+} from "@odin/core/types";
 
 @Entity()
 export class Bounty {
@@ -32,16 +37,16 @@ export class Bounty {
   expiresAt: Date;
 
   @Property({ type: JsonType, nullable: false })
-  expectedOutput: any; // define type
+  expectedOutput: BountyExpectedOutput;
 
   @Property({ type: JsonType, nullable: false })
   prize: any; // define type
 
   @Property({ type: "string", nullable: false })
-  type: string; // custom enum
+  type: BountyType;
 
   @Property({ type: "string", nullable: false })
-  status: string; // custom enum
+  status: BountyStatus;
 
   constructor(
     name: string,
@@ -50,8 +55,8 @@ export class Bounty {
     expiresAt: Date,
     expectedOutput: any,
     prize: any,
-    type: string,
-    status: string,
+    type: BountyType,
+    status: BountyStatus,
   ) {
     this.name = name;
     this.description = description;

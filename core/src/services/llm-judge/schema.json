@@ -1,0 +1,138 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Orchestrate Analysis Workflow",
+  "description": "Schema for an orchestration analysis workflow with nodes and edges",
+  "type": "object",
+  "required": ["graph"],
+  "properties": {
+    "graph": {
+      "type": "object",
+      "required": ["nodes", "edges"],
+      "properties": {
+        "nodes": {
+          "type": "array",
+          "description": "Collection of processing nodes in the workflow",
+          "items": {
+            "type": "object",
+            "required": ["id", "type", "description", "input", "output"],
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Unique identifier for the node"
+              },
+              "type": {
+                "type": "string",
+                "description": "Type of the node (llm, web_search)",
+                "enum": ["llm", "web_search"]
+              },
+              "description": {
+                "type": "string",
+                "description": "Description of the node's purpose"
+              },
+              "input": {
+                "type": "array",
+                "description": "Input identifiers required by this node. Ensure that all input identifiers are either corresponding to the output of another node or are from the expectedOutput.",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "output": {
+                "type": "string",
+                "description": "Identifier for the output produced by this node"
+              },
+              "output_schema": {
+                "type": "string",
+                "description": "The schema for the output produced by this node must conform to JSON Schema standards. It should include both required and properties fields at every level of nesting. All properties defined within the schema must be marked as required. This ensures strict validation and adherence to the expected structure."
+              },
+              "prompt_template": {
+                "type": "string",
+                "description": "Template for generating prompts in LLM nodes"
+              },
+              "search_parameters": {
+                "type": "object",
+                "description": "Parameters for web search nodes",
+                "properties": {
+                  "query_template": {
+                    "type": "string",
+                    "description": "Template for generating search queries. Make sure to use {{}} for variables."
+                  }
+                }
+              }
+            },
+            "allOf": [
+              {
+                "if": {
+                  "properties": { "type": { "const": "llm" } }
+                },
+                "then": {
+                  "required": ["prompt_template", "output_schema"]
+                }
+              },
+              {
+                "if": {
+                  "properties": { "type": { "const": "web_search" } }
+                },
+                "then": {
+                  "required": ["search_parameters", "output_schema"]
+                }
+              }
+            ]
+          }
+        },
+        "edges": {
+          "type": "array",
+          "description": "Connections between nodes defining data flow",
+          "items": {
+            "type": "object",
+            "required": ["from", "to"],
+            "properties": {
+              "from": {
+                "type": "string",
+                "description": "Source node ID"
+              },
+              "to": {
+                "type": "string",
+                "description": "Destination node ID"
+              }
+            }
+          }
+        }
+      }
+    },
+    "node_type_definitions": {
+      "type": "object",
+      "description": "Definitions for different types of nodes",
+      "required": ["llm", "web_search"],
+      "properties": {
+        "llm": {
+          "type": "object",
+          "required": ["description", "execution_method"],
+          "properties": {
+            "description": {
+              "type": "string",
+              "description": "Description of LLM node type"
+            },
+            "execution_method": {
+              "type": "string",
+              "description": "How LLM nodes are executed"
+            }
+          }
+        },
+        "web_search": {
+          "type": "object",
+          "required": ["description", "execution_method"],
+          "properties": {
+            "description": {
+              "type": "string",
+              "description": "Description of web search node type"
+            },
+            "execution_method": {
+              "type": "string",
+              "description": "How web search nodes are executed"
+            }
+          }
+        }
+      }
+    }
+  }
+}
