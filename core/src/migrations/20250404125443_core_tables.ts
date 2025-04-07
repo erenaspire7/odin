@@ -12,25 +12,24 @@ export async function up(knex: Knex): Promise<void> {
     await knex.schema.withSchema("odin").createTable("Bounty", (table) => {
       table.uuid("bountyId").notNullable().primary();
 
-      // creator can't make agents for deployed bounty
       table
         .uuid("creatorId")
         .notNullable()
         .references("userId")
         .inTable("odin.User");
+
       table.string("name").notNullable();
       table.text("description").notNullable();
+
       table.timestamp("createdAt").notNullable().defaultTo(knex.fn.now());
       table.timestamp("updatedAt").notNullable().defaultTo(knex.fn.now());
       table.timestamp("expiresAt").notNullable();
+
       table.jsonb("expectedOutput").notNullable();
-      table.jsonb("evaluationCriteria").notNullable()
+      table.jsonb("evaluationCriteria").notNullable();
+
       table.jsonb("prize").notNullable();
-
-      // type - sponsored / community
       table.string("type").notNullable();
-
-      // draft, active, completed, cancelled
       table.string("status").notNullable();
     }),
 

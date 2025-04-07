@@ -87,6 +87,17 @@ export class AgentService {
 
     if (!bounty) throw new Error("Bounty not found");
 
+    const existingAgent = await this.agentRepository.getAgentByBounty(
+      bountyId,
+      walletAddress,
+    );
+
+    if (bounty.creator.walletAddress == walletAddress) {
+      throw new Error("Creator cannot enroll as agent");
+    }
+
+    if (existingAgent) throw new Error("Agent already enrolled");
+
     const webhookUrl = `public/webhooks/${randomUUID()}`;
 
     const webhookSecret = this.generateSecret(bounty.expiresAt);
@@ -138,7 +149,7 @@ export class AgentService {
 
     const changes = { filecoinCid, validated: true };
 
-    await this.agentRepository.updateAgent({ agent, changes });
+    await this.agentRepository.updateAgent(agent, changes);
 
     // trigger evaluation
   }

@@ -9,3 +9,5 @@ A bounty marketplace for developers to participate in and earn rewards for compl
 ## Sequence Overview
 
 ## Core Components and Architecture
+
+![Architecture](./diagrams/architecture_diagram.png)

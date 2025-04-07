@@ -27,7 +27,7 @@ export class Agent {
   webhookSecret: string;
 
   @Property({ type: "boolean", nullable: false })
-  validated: boolean;
+  validated: boolean = false;
 
   @Property({ type: DateTimeType, nullable: false })
   createdAt: Date = new Date();

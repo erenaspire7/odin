@@ -19,12 +19,16 @@ export class AgentRepository extends EntityRepository<Agent> {
   }
 
   async getAgent(agentId: string) {
-    return this.findOne({ agentId });
+    return await this.findOne({ agentId });
   }
 
-  async updateAgent({ agent, changes }: { agent: Agent; changes: any }) {
+  async updateAgent(agent: Agent, changes: any) {
     const updatedAgent = wrap(agent).assign(changes, { merge: true });
     this.getEntityManager().persist(updatedAgent);
     return updatedAgent;
+  }
+
+  async getAgentByBounty(bountyId: string, walletAddress: string) {
+    return await this.findOne({ bounty: { bountyId }, creator: { walletAddress } });
   }
 }
