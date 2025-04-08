@@ -14,6 +14,7 @@ import fs from "fs";
 import _ from "lodash";
 import { randomUUID } from "crypto";
 import { validateSchema } from "@odin/core/utils";
+import path from "path";
 
 export class LLMJudgeService {
   private client: Anthropic;
@@ -110,14 +111,13 @@ export class LLMJudgeService {
 
     if (llmOutput.length > 0) {
       // @ts-ignore
-      const [orchestrationSteps] = llmOutput.input;
+      const [result] = llmOutput.input;
 
-      if (!validateSchema(orchestrateSchema, orchestrationSteps)) {
+      if (!validateSchema(orchestrateSchema, result)) {
         throw new Error("Invalid LLM Output");
       }
 
-      // save to db
-      fs.writeFileSync("data.json", JSON.stringify(orchestrationSteps));
+      return result;
     }
   }
 
@@ -186,30 +186,6 @@ export class LLMJudgeService {
     }
 
     return result;
-  }
-
-  async executeEvaluation(
-    orchestrationSteps: Orchestration,
-    agenticResponse: AgenticResponseType,
-  ) {
-    const { finalAnswer } = agenticResponse;
-
-    const { graph } = orchestrationSteps;
-    const { nodes, edges } = graph;
-
-    const sequence = this.constructDependencySequence(edges);
-
-    let payload = finalAnswer;
-
-    for (let nodeId of sequence) {
-      const node = nodes.find((el) => el.id == nodeId);
-
-      if (!node) {
-        throw new Error("Internal Server Error");
-      }
-
-      payload = await this.executeNode(node!, payload);
-    }
   }
 
   parseTemplate(
@@ -283,74 +259,177 @@ export class LLMJudgeService {
   }
 
   async executeWebSearch(node: OrchestrationNode, stepInput: any) {
-    const { search_parameters, output_schema, output } = node;
+    const { search_parameters, output_schema, output: key, id } = node;
     const { query_template } = search_parameters!;
+
+    const checkpointDir = `./checkpoints/${id}`;
+
+    if (!fs.existsSync(checkpointDir)) {
+      fs.mkdirSync(checkpointDir, { recursive: true });
+    }
 
     let payload = { ...stepInput };
 
     const queries = this.parseTemplate(query_template, payload);
 
-    const nodeOutput: any[] = [];
+    let nodeOutput: any[] = [];
+
+    const outputPath = path.join(checkpointDir, "node_output.json");
+
+    if (fs.existsSync(outputPath)) {
+      nodeOutput = JSON.parse(fs.readFileSync(outputPath, "utf8"));
+      console.log(
+        `Loaded ${nodeOutput.length} existing results from checkpoint`,
+      );
+    }
+
+    const processedQueries = new Set(
+      nodeOutput
+        .map((item) => item._query_index)
+        .filter((idx) => idx !== undefined),
+    );
 
     for (const [index, query] of queries.entries()) {
-      const { results } = await this.webSearch(query);
+      // Skip already processed queries
+      if (processedQueries.has(index)) {
+        console.log(`Skipping already processed query at index ${index}`);
+        continue;
+      }
+
+      let searchResults;
+      const searchResultsPath = path.join(
+        checkpointDir,
+        `search_results_${index}.json`,
+      );
+
+      if (fs.existsSync(searchResultsPath)) {
+        searchResults = JSON.parse(fs.readFileSync(searchResultsPath, "utf8"));
+        console.log(`Loaded cached search results for query index ${index}`);
+      } else {
+        // Perform web search and save results
+        searchResults = await this.webSearch(query);
+        fs.writeFileSync(
+          searchResultsPath,
+          JSON.stringify(searchResults),
+          "utf8",
+        );
+      }
 
       let success = false;
 
-      for (const { url } of results) {
+      const processedUrlsPath = path.join(
+        checkpointDir,
+        `processed_urls_${index}.json`,
+      );
+      let processedUrls: string[] = [];
+
+      if (fs.existsSync(processedUrlsPath)) {
+        processedUrls = JSON.parse(fs.readFileSync(processedUrlsPath, "utf8"));
+      }
+
+      for (const { url } of searchResults.results) {
         if (success) {
           break;
         }
 
-        const { results, failed_results } = await this.webExtract(url);
+        if (processedUrls.includes(url)) {
+          console.log(`Skipping already processed URL: ${url}`);
+          continue;
+        }
 
-        if (results.length > 0) {
-          const { raw_content } = results[0];
+        let extractionResults;
+        const extractionPath = path.join(
+          checkpointDir,
+          `extraction_${Buffer.from(url).toString("base64")}.json`,
+        );
 
-          const message = await this.client.messages.create({
-            max_tokens: 1024 * 8,
-            system:
-              "You are an AI assistant specializing in analyzing raw data and converting into a structured JSON format based on specific query parameters. Remember to strictly generate a response based on the query and raw_content provided..",
-            messages: [
-              {
-                role: "user",
-                content: `
-                <query>
-                ${query}
-                </query>
-
-                <raw-content>
-                ${raw_content}
-                </raw-content>
-                `,
-              },
-            ],
-            model: "claude-3-5-sonnet-latest",
-            tools: [
-              {
-                name: "analyze_data",
-                description: "Analyze data based off query intent",
-                input_schema: JSON.parse(output_schema),
-              },
-            ],
-          });
-
-          const llmOutput = message.content.filter(
-            (el) => el.type == "tool_use" && el.name == "analyze_data",
+        if (fs.existsSync(extractionPath)) {
+          extractionResults = JSON.parse(
+            fs.readFileSync(extractionPath, "utf8"),
           );
+          console.log(`Loaded cached extraction for URL: ${url}`);
+        } else {
+          // Perform web extraction and save results
+          extractionResults = await this.webExtract(url);
+          fs.writeFileSync(
+            extractionPath,
+            JSON.stringify(extractionResults),
+            "utf8",
+          );
+        }
 
-          if (llmOutput.length > 0) {
-            // @ts-ignore
-            const [analysis] = llmOutput.input;
-            
-            if (!validateSchema(JSON.parse(output_schema), analysis)) {
+        processedUrls.push(url);
+        fs.writeFileSync(
+          processedUrlsPath,
+          JSON.stringify(processedUrls),
+          "utf8",
+        );
+
+        if (extractionResults.results.length > 0) {
+          const { raw_content } = extractionResults.results[0];
+
+          const analysisId = `analysis_${index}_${Buffer.from(url).toString("base64").substring(0, 10)}`;
+          const analysisPath = path.join(checkpointDir, `${analysisId}.json`);
+
+          let llmResult;
+
+          if (fs.existsSync(analysisPath)) {
+            llmResult = JSON.parse(fs.readFileSync(analysisPath, "utf8"));
+            console.log(`Loaded cached LLM analysis for URL: ${url}`);
+          } else {
+            const message = await this.client.messages.create({
+              max_tokens: 1024 * 8,
+              system:
+                "You are an AI assistant specializing in analyzing raw data and converting into a structured JSON format based on specific query parameters. Remember to strictly generate a response based on the query and raw_content provided..",
+              messages: [
+                {
+                  role: "user",
+                  content: `
+                  <query>
+                  ${query}
+                  </query>
+
+                  <raw-content>
+                  ${raw_content}
+                  </raw-content>
+                  `,
+                },
+              ],
+              model: "claude-3-5-sonnet-latest",
+              tools: [
+                {
+                  name: "analyze_data",
+                  description: "Analyze data based off query intent",
+                  input_schema: JSON.parse(output_schema),
+                },
+              ],
+            });
+
+            const llmOutput = message.content.filter(
+              (el) => el.type == "tool_use" && el.name == "analyze_data",
+            );
+
+            if (llmOutput.length > 0) {
+              // @ts-ignore
+              let [llmResult] = llmOutput.input;
+              fs.writeFileSync(analysisPath, JSON.stringify(llmResult), "utf8");
+            }
+          }
+
+          if (llmResult) {
+            if (!validateSchema(JSON.parse(output_schema), llmResult)) {
               throw new Error("Invalid LLM Output");
             }
-            
-            // save to db - potentially explore alternative pattern to prevent duplicate invocations
-            fs.writeFileSync(`analysis-${index}`, JSON.stringify(analysis));
 
-            nodeOutput.push(analysis);
+            const resultWithMetadata = {
+              ...llmResult,
+              _query_index: index,
+              _source_url: url,
+            };
+
+            nodeOutput.push(resultWithMetadata);
+            fs.writeFileSync(outputPath, JSON.stringify(nodeOutput), "utf8");
+
             success = true;
           }
         }
@@ -359,14 +438,18 @@ export class LLMJudgeService {
 
     payload = {
       ...payload,
-      [output]: nodeOutput,
+      [key]: nodeOutput.map((item) => {
+        // Create a clean copy without our tracking metadata
+        const { _query_index, _source_url, ...cleanItem } = item;
+        return cleanItem;
+      }),
     };
 
     return payload;
   }
 
   async executeLLMPrompt(node: OrchestrationNode, stepInput: any) {
-    const { prompt_template, output_schema, output } = node;
+    const { prompt_template, output_schema, output: key } = node;
 
     let payload = { ...stepInput };
 
@@ -399,17 +482,14 @@ export class LLMJudgeService {
     if (llmOutput.length > 0) {
       // @ts-ignore
       const [result] = llmOutput.input;
-      // save to db - potentially explore alternative pattern to prevent duplicate invocations
-      
+
       if (!validateSchema(JSON.parse(output_schema), result)) {
         throw new Error("Invalid LLM Output");
       }
-      
-      fs.writeFileSync(`executor-${randomUUID()}`, JSON.stringify(result));
 
       payload = {
         ...payload,
-        [output]: result,
+        [key]: result,
       };
     }
 

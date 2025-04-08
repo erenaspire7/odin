@@ -1,4 +1,5 @@
 import { LLMJudgeService } from "@odin/core/services";
+import lighthouse from "@lighthouse-web3/sdk";
 
 import {
   EvaluationCriteriaTypeEnum,
@@ -199,11 +200,12 @@ const main = async () => {
 
   const { evaluationCriteria, expectedOutput, stubResponse } = scenarios[0];
 
-  await llmJudgeService.orchestrateAgenticEvaluation(
-    evaluationCriteria,
-    expectedOutput,
-  );
+  // await llmJudgeService.orchestrateAgenticEvaluation(
+  //   evaluationCriteria,
+  //   expectedOutput,
+  // );
 
+  // console.log(a);
   // await llmJudgeService.executeWebSearch(
   //   {
   //     "id": "fetch_market_data",

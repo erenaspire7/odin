@@ -21,11 +21,13 @@ import {
 import { ethers } from "ethers";
 import lighthouse from "@lighthouse-web3/sdk";
 import { validateSchema } from "@odin/core/utils";
+import { QueueService } from "@odin/core/services";
 
 export class AgentService {
   private readonly agentRepository: AgentRepository;
   private readonly userRepository: UserRepository;
   private readonly bountyRepository: BountyRepository;
+  private readonly queueService: QueueService;
 
   private algorithm = "aes-256-cbc";
   private key = Buffer.from(process.env.APP_KEY!, "hex");
@@ -40,6 +42,8 @@ export class AgentService {
 
     this.bountyRepository =
       RequestContext.getEntityManager()!.getRepository(Bounty);
+
+    this.queueService = new QueueService(RequestContext.getEntityManager()!);
   }
 
   generateSecret(expiresAt: Date) {
@@ -136,7 +140,7 @@ export class AgentService {
 
     await this.verifySignature(agent, signature);
 
-    const { expectedOutput } = agent.bounty;
+    const { expectedOutput, bountyId } = agent.bounty;
 
     this.validateFinalAnswer(finalAnswer, expectedOutput);
 
@@ -152,6 +156,11 @@ export class AgentService {
     await this.agentRepository.updateAgent(agent, changes);
 
     // trigger evaluation
+    await this.queueService.enqueueOrchestrationJob(
+      bountyId,
+      agenticResponse,
+      {},
+    );
   }
 
   async verifySignature(agent: Agent, signature: string) {

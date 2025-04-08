@@ -3,10 +3,10 @@ import { AuthHeadersSchema, CreateBountyPayloadSchema } from "@odin/core/types";
 import { BountyService } from "@odin/core/services";
 
 export default async function (fastify: FastifyInstance) {
-  const bountyService = new BountyService();
-
   fastify.post("/create", async (request, reply) => {
     const { walletAddress } = AuthHeadersSchema.parse(request.headers);
+
+    const bountyService = new BountyService();
 
     const payload = CreateBountyPayloadSchema.parse(request.body);
 
