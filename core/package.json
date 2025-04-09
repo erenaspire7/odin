@@ -4,7 +4,8 @@
   "scripts": {
     "migrate": "yarn knex migrate:latest",
     "rollback": "yarn knex migrate:rollback --all",
-    "start": "yarn ts-node -r tsconfig-paths/register src/main.ts"
+    "start": "yarn ts-node -r tsconfig-paths/register src/main.ts",
+    "poll": "yarn ts-node -r tsconfig-paths/register src/workers/processQueue.ts"
   },
   "devDependencies": {
     "@types/lodash": "^4.17.16",

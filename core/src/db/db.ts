@@ -14,6 +14,7 @@ export async function initMikroORM() {
       min: 2,
       max: 10,
     },
+    schema: "odin",
     namingStrategy: EntityCaseNamingStrategy,
   });
 

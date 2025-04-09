@@ -231,14 +231,152 @@ class DatasetTransformer<T> {
     this.data = data;
   }
 
-  // type is an enum - inference, supervised-fine-tuning, drpo, orpo
-  // returns jsonl output, which is then made downloadable on the UI
   transform(modelName: string, type: string) {
-    return "";
+    // Apply appropriate transformation based on the training type
+    switch (type) {
+      case "inference":
+        return this.transformForInference(modelName);
+      case "supervised-fine-tuning":
+        return this.transformForSFT(modelName);
+      default:
+        throw new Error(`Unsupported training type: ${type}`);
+    }
+  }
+
+  /**
+   * Transform data for inference
+   */
+  private async transformForInference(modelName: string) {
+    // Detect the structure of the data and try to adapt
+    const jsonlLines = this.data
+      .map((item) => {
+        let entry;
+
+        if (item) {
+          if (typeof item === "object") {
+            // Check for common field patterns
+            if ("prompt" in item) {
+              entry = JSON.stringify(item);
+            } else if ("input" in item) {
+              entry = JSON.stringify({ prompt: item.input });
+            } else if ("text" in item) {
+              entry = JSON.stringify({ prompt: item.text });
+            } else if ("question" in item) {
+              entry = JSON.stringify({ prompt: item.question });
+            } else {
+              // Best guess - stringify the whole object as context
+              entry = JSON.stringify({
+                prompt: `Context: ${JSON.stringify(item)}\n\nBased on the above context, please provide an appropriate response.`,
+              });
+            }
+          }
+
+          entry = JSON.stringify({ prompt: String(item) });
+          // apply modelName transformation
+        }
+
+        return entry;
+      })
+      .filter((el) => el != undefined);
+
+    return jsonlLines;
+  }
+
+  private async transformForSFT(modelName: string) {
+    const jsonlLines = this.data.map((item) => {
+      let entry;
+
+      if (item) {
+        // Try to detect instruction/input/output patterns
+        if (typeof item === "object") {
+          // Check for direct SFT format
+          if ("instruction" in item && "output" in item) {
+            const sftItem: any = {
+              instruction: item.instruction,
+            };
+
+            // Include input if available
+            if ("input" in item) {
+              sftItem.input = item.input;
+            }
+
+            sftItem.output = item.output;
+            entry = JSON.stringify(sftItem);
+          }
+          // Check for prompt/completion format (OpenAI style)
+          else if ("prompt" in item && "completion" in item) {
+            entry = JSON.stringify({
+              instruction: "Complete the following",
+              input: item.prompt,
+              output: item.completion,
+            });
+          }
+          // Check for question/answer format
+          else if ("question" in item && "answer" in item) {
+            entry = JSON.stringify({
+              instruction: "Answer the following question",
+              input: item.question,
+              output: item.answer,
+            });
+          }
+          // Check for context/question/answer format
+          else if (
+            "context" in item &&
+            "question" in item &&
+            "answer" in item
+          ) {
+            entry = JSON.stringify({
+              instruction: "Answer the question based on the given context",
+              input: `Context: ${item.context}\n\nQuestion: ${item.question}`,
+              output: item.answer,
+            });
+          } else {
+            // Make best effort to convert to SFT format
+            const keys = Object.keys(item);
+            const instruction = "Process the following data";
+            const input = JSON.stringify(item);
+            const output = "I've processed the data successfully.";
+
+            entry = JSON.stringify({ instruction, input, output });
+          }
+        } else if (typeof item === "string") {
+          // For plain text, try to split by patterns like "Q:" and "A:"
+          if (item.includes("Q:") && item.includes("A:")) {
+            const parts = item.split("A:");
+            const questionPart = parts[0].replace("Q:", "").trim();
+            const answerPart = parts[1].trim();
+
+            entry = JSON.stringify({
+              instruction: "Answer the following question",
+              input: questionPart,
+              output: answerPart,
+            });
+          } else {
+            // Fallback for plain text - treat as a sample output
+            entry = JSON.stringify({
+              instruction: "Generate content like the following example",
+              input: "",
+              output: item,
+            });
+          }
+        }
+      }
+
+      // Default fallback
+      entry = JSON.stringify({
+        instruction: "Process the following",
+        input: String(item),
+        output: "Processed successfully.",
+      });
+
+      return entry;
+    });
+
+    return jsonlLines.join("\n");
   }
 
   // Get the raw result data
-  get(): T[] {
+  getRawData(): T[] {
     return this.data;
   }
 }

@@ -1,5 +1,5 @@
 import { QueueJob } from "@odin/core/db";
-import { EntityRepository, LockMode } from "@mikro-orm/postgresql";
+import { EntityRepository, LockMode, Transactional } from "@mikro-orm/postgresql";
 import { JobType, JobStatus, QueueJobPayload } from "@odin/core/types";
 
 export class QueueRepository extends EntityRepository<QueueJob> {
@@ -39,6 +39,7 @@ export class QueueRepository extends EntityRepository<QueueJob> {
     return jobs;
   }
 
+  @Transactional()
   async getNextJob(types?: JobType[], lockTimeSeconds = 60) {
     const em = this.getEntityManager();
 
