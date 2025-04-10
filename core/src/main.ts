@@ -2,7 +2,8 @@ import Fastify from "fastify";
 import { RequestContext } from "@mikro-orm/core";
 import { initMikroORM } from "@odin/core/db";
 import { app } from "./api";
-import dotenv from "dotenv";
+import * as dotenv from "dotenv";
+
 dotenv.config();
 
 const port = process.env.PORT ? Number(process.env.PORT) : 3000;

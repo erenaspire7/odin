@@ -16,6 +16,7 @@ export async function initMikroORM() {
     },
     schema: "odin",
     namingStrategy: EntityCaseNamingStrategy,
+    discovery: { disableDynamicFileAccess: true },
   });
 
   return orm;

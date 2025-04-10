@@ -32,6 +32,6 @@ export async function app(fastify: FastifyInstance, opts: AppOptions) {
         options: { ...opts },
       });
     },
-    { prefix: "/api/v1" },
+    { ...opts, prefix: "/api/v1" },
   );
 }

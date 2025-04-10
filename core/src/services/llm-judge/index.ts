@@ -10,11 +10,11 @@ import {
   WebExtractResult,
   OrchestrationEdge,
 } from "@odin/core/types";
-import fs from "fs";
-import _ from "lodash";
+import * as fs from "fs";
+import * as _ from "lodash";
 import { randomUUID } from "crypto";
 import { validateSchema } from "@odin/core/utils";
-import path from "path";
+import * as path from "path";
 
 export class LLMJudgeService {
   private client: Anthropic;
