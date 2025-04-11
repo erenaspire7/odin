@@ -1,6 +1,7 @@
 import Fastify from "fastify";
 import { RequestContext } from "@mikro-orm/core";
 import { initMikroORM } from "@odin/core/db";
+import { QueueService } from "./services";
 import { app } from "./api";
 import * as dotenv from "dotenv";
 
@@ -30,6 +31,9 @@ async function bootstrap() {
   const url = await server.listen({ port });
 
   console.log(`server started at ${url}`);
+  
+  // Initialize QueueService
+  new QueueService(orm.em);
 
   return { server, url };
 }

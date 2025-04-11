@@ -7,7 +7,7 @@
     "start:dev": "yarn ts-node -r tsconfig-paths/register src/main.ts",
     "start:prod": "node dist/main.js",
     "poll": "yarn ts-node -r tsconfig-paths/register src/workers/processQueue.ts",
-    "build": "rm -rf dist && yarn ts-node build.js"
+    "build": "rm -rf dist && yarn ts-node build.js && yarn run migrate"
   },
   "devDependencies": {
     "@types/lodash": "^4.17.16",
@@ -26,6 +26,7 @@
     "@mikro-orm/core": "^6.4.11",
     "@mikro-orm/postgresql": "^6.4.11",
     "@mikro-orm/reflection": "^6.4.11",
+    "bullmq": "^5.48.1",
     "dotenv": "^16.4.7",
     "ethers": "^6.13.5",
     "fastify": "^5.2.2",
@@ -35,6 +36,7 @@
     "lodash": "^4.17.21",
     "ollama": "^0.5.14",
     "pg": "^8.14.1",
+    "redis": "^4.7.0",
     "zod": "^3.24.2"
   }
 }

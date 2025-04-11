@@ -1,28 +1,30 @@
 import Anthropic from "@anthropic-ai/sdk";
 import orchestrateSchema from "./schema.json";
 import {
-  AgenticResponseType,
   BountyExpectedOutput,
   EvaluationCriteria,
-  Orchestration,
   OrchestrationNode,
   WebSearchResult,
   WebExtractResult,
   OrchestrationEdge,
 } from "@odin/core/types";
-import * as fs from "fs";
-import * as _ from "lodash";
-import { randomUUID } from "crypto";
+import fs from "fs";
+import _ from "lodash";
 import { validateSchema } from "@odin/core/utils";
 import * as path from "path";
+import Redis from "ioredis";
+import { hash } from "crypto";
 
 export class LLMJudgeService {
   private client: Anthropic;
+  private redis: Redis;
 
   constructor() {
     this.client = new Anthropic({
       apiKey: process.env.ANTHROPIC_API_KEY,
     });
+
+    this.redis = new Redis(process.env.REDIS_URL!);
   }
 
   async webSearch(query: string): Promise<WebSearchResult> {
@@ -258,29 +260,44 @@ export class LLMJudgeService {
     }
   }
 
+  // Redis key helpers
+  private getNodeOutputKey(nodeId: string) {
+    return `odin:node:${nodeId}:output`;
+  }
+
+  private getQueryResultKey(nodeId: string, queryIndex: number) {
+    return `odin:node:${nodeId}:query:${queryIndex}:results`;
+  }
+
+  private getProcessedUrlsKey(nodeId: string, queryIndex: number) {
+    return `odin:node:${nodeId}:query:${queryIndex}:processed_urls`;
+  }
+
+  private getExtractionKey(nodeId: string, url: string) {
+    const encodedUrl = Buffer.from(url).toString("base64");
+    return `odin:node:${nodeId}:extraction:${encodedUrl}`;
+  }
+
+  private getAnalysisKey(nodeId: string, queryIndex: number, url: string) {
+    const shortUrl = Buffer.from(url).toString("base64").substring(0, 10);
+    return `odin:node:${nodeId}:analysis:${queryIndex}:${shortUrl}`;
+  }
+
   async executeWebSearch(node: OrchestrationNode, stepInput: any) {
-    const { search_parameters, output_schema, output: key, id } = node;
+    const { search_parameters, output_schema, output: key } = node;
     const { query_template } = search_parameters!;
 
-    const checkpointDir = `./checkpoints/${id}`;
-
-    if (!fs.existsSync(checkpointDir)) {
-      fs.mkdirSync(checkpointDir, { recursive: true });
-    }
-
     let payload = { ...stepInput };
-
     const queries = this.parseTemplate(query_template, payload);
 
+    const id = hash("sha256", JSON.stringify(node));
+    const nodeOutputKey = this.getNodeOutputKey(id);
+
     let nodeOutput: any[] = [];
+    const existingOutput = await this.redis.get(nodeOutputKey);
 
-    const outputPath = path.join(checkpointDir, "node_output.json");
-
-    if (fs.existsSync(outputPath)) {
-      nodeOutput = JSON.parse(fs.readFileSync(outputPath, "utf8"));
-      console.log(
-        `Loaded ${nodeOutput.length} existing results from checkpoint`,
-      );
+    if (existingOutput) {
+      nodeOutput = JSON.parse(existingOutput);
     }
 
     const processedQueries = new Set(
@@ -297,34 +314,32 @@ export class LLMJudgeService {
       }
 
       let searchResults;
-      const searchResultsPath = path.join(
-        checkpointDir,
-        `search_results_${index}.json`,
-      );
+      const searchResultsKey = this.getQueryResultKey(id, index);
 
-      if (fs.existsSync(searchResultsPath)) {
-        searchResults = JSON.parse(fs.readFileSync(searchResultsPath, "utf8"));
+      const cachedSearchResults = await this.redis.get(searchResultsKey);
+
+      if (cachedSearchResults) {
+        searchResults = JSON.parse(cachedSearchResults);
         console.log(`Loaded cached search results for query index ${index}`);
       } else {
-        // Perform web search and save results
+        // Perform web search and save results to Redis
         searchResults = await this.webSearch(query);
-        fs.writeFileSync(
-          searchResultsPath,
+        await this.redis.set(
+          searchResultsKey,
           JSON.stringify(searchResults),
-          "utf8",
+          "EX",
+          60 * 60 * 24 * 7, // Cache for 7 days
         );
       }
 
       let success = false;
 
-      const processedUrlsPath = path.join(
-        checkpointDir,
-        `processed_urls_${index}.json`,
-      );
+      const processedUrlsKey = this.getProcessedUrlsKey(id, index);
       let processedUrls: string[] = [];
 
-      if (fs.existsSync(processedUrlsPath)) {
-        processedUrls = JSON.parse(fs.readFileSync(processedUrlsPath, "utf8"));
+      const cachedProcessedUrls = await this.redis.get(processedUrlsKey);
+      if (cachedProcessedUrls) {
+        processedUrls = JSON.parse(cachedProcessedUrls);
       }
 
       for (const { url } of searchResults.results) {
@@ -338,44 +353,44 @@ export class LLMJudgeService {
         }
 
         let extractionResults;
-        const extractionPath = path.join(
-          checkpointDir,
-          `extraction_${Buffer.from(url).toString("base64")}.json`,
-        );
+        const extractionKey = this.getExtractionKey(id, url);
 
-        if (fs.existsSync(extractionPath)) {
-          extractionResults = JSON.parse(
-            fs.readFileSync(extractionPath, "utf8"),
-          );
+        // Check for cached extraction in Redis
+        const cachedExtraction = await this.redis.get(extractionKey);
+
+        if (cachedExtraction) {
+          extractionResults = JSON.parse(cachedExtraction);
           console.log(`Loaded cached extraction for URL: ${url}`);
         } else {
-          // Perform web extraction and save results
+          // Perform web extraction and save results to Redis
           extractionResults = await this.webExtract(url);
-          fs.writeFileSync(
-            extractionPath,
+          await this.redis.set(
+            extractionKey,
             JSON.stringify(extractionResults),
-            "utf8",
+            "EX",
+            60 * 60 * 24 * 7, // Cache for 7 days
           );
         }
 
         processedUrls.push(url);
-        fs.writeFileSync(
-          processedUrlsPath,
+        await this.redis.set(
+          processedUrlsKey,
           JSON.stringify(processedUrls),
-          "utf8",
+          "EX",
+          60 * 60 * 24 * 7, // Cache for 7 days
         );
 
         if (extractionResults.results.length > 0) {
           const { raw_content } = extractionResults.results[0];
 
-          const analysisId = `analysis_${index}_${Buffer.from(url).toString("base64").substring(0, 10)}`;
-          const analysisPath = path.join(checkpointDir, `${analysisId}.json`);
+          const analysisKey = this.getAnalysisKey(id, index, url);
 
           let llmResult;
 
-          if (fs.existsSync(analysisPath)) {
-            llmResult = JSON.parse(fs.readFileSync(analysisPath, "utf8"));
-            console.log(`Loaded cached LLM analysis for URL: ${url}`);
+          const cachedAnalysis = await this.redis.get(analysisKey);
+
+          if (cachedAnalysis) {
+            llmResult = JSON.parse(cachedAnalysis);
           } else {
             const message = await this.client.messages.create({
               max_tokens: 1024 * 8,
@@ -412,7 +427,13 @@ export class LLMJudgeService {
             if (llmOutput.length > 0) {
               // @ts-ignore
               let [llmResult] = llmOutput.input;
-              fs.writeFileSync(analysisPath, JSON.stringify(llmResult), "utf8");
+              // Cache LLM result in Redis
+              await this.redis.set(
+                analysisKey,
+                JSON.stringify(llmResult),
+                "EX",
+                60 * 60 * 24 * 7, // Cache for 7 days
+              );
             }
           }
 
@@ -428,8 +449,13 @@ export class LLMJudgeService {
             };
 
             nodeOutput.push(resultWithMetadata);
-            fs.writeFileSync(outputPath, JSON.stringify(nodeOutput), "utf8");
-
+            // Update node output in Redis
+            await this.redis.set(
+              nodeOutputKey,
+              JSON.stringify(nodeOutput),
+              "EX",
+              60 * 60 * 24 * 7, // Cache for 7 days
+            );
             success = true;
           }
         }
