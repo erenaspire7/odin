@@ -18,6 +18,12 @@ export class UserService {
       throw new Error("Invalid wallet address");
     }
 
+    const user = await this.userRepository.findOne({ walletAddress });
+
+    if (user) {
+      return user;
+    }
+
     return this.userRepository.createUser(payload);
   }
 }

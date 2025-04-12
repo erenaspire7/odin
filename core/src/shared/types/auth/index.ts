@@ -1,10 +1,11 @@
+import { Wallet } from "ethers";
 import { z } from "zod";
 
-export const AuthHeadersSchema = z.object({
-  walletAddress: z.string().min(1),
+export const SiweVerifySchema = z.object({
+  message: z.string().min(1),
   signature: z.string().min(1),
 });
 
-export const AuthMessageSchema = z.object({
-  expiresAt: z.string().datetime(), // ISO 8601 date string
+export const RegisterSchema = z.object({
+  walletAddress: z.string().min(1),
 });

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { parse } from "csv-parse";
 
 type ComparisonOperator =
   | "$eq"
@@ -37,9 +38,7 @@ export class NexusService {
       const buffer = await response.arrayBuffer();
       const data = new Uint8Array(buffer);
 
-      // Infer data type and parse accordingly
-      const dataType = this.inferDataType(data);
-      const parsedData = this.parseData(data, dataType);
+      const parsedData = this.parseData(data);
       const schema = this.createSchemaFromJson(parsedData) as T;
 
       // Create a context that can be used for chaining
@@ -49,80 +48,36 @@ export class NexusService {
     throw new Error("Failed to retrieve data");
   }
 
-  inferDataType(data: any) {
-    // Convert beginning of buffer to string for inspection
-    const sampleText = new TextDecoder().decode(data.slice(0, 1000));
+  parseData(data: Uint8Array): any {
+    const sampleText = new TextDecoder().decode(data);
 
-    // Check for JSON structure
-    if (
-      (sampleText.trim().startsWith("{") && sampleText.trim().endsWith("}")) ||
-      (sampleText.trim().startsWith("[") && sampleText.trim().endsWith("]"))
-    ) {
-      try {
-        JSON.parse(sampleText);
-        return "json";
-      } catch (e) {
-        // Not valid JSON
+    // check for JSON
+    try {
+      const json = JSON.parse(sampleText);
+
+      if (Array.isArray(json)) {
+        return json;
       }
+
+      if (typeof json === "object") {
+        return [json];
+      }
+    } catch (e) {
+      // Not valid JSON
     }
 
-    // Check for CSV (look for consistent delimiters)
-    const lines = sampleText.split("\n").slice(0, 5);
-    // if (lines.length > 1) {
-    //   const commas = lines.map((line) => (line.match(/,/g) || []).length);
-    //   if (commas.length > 1 && new Set(commas).size === 1) {
-    //     return "csv";
-    //   }
-    // }
-
-    // // Check for JSONL - multiple lines where each is valid JSON
-    // if (lines.length > 1) {
-    //   let validJsonLines = 0;
-    //   // Check first few lines (up to 5)
-    //   const linesToCheck = Math.min(5, lines.length);
-
-    //   for (let i = 0; i < linesToCheck; i++) {
-    //     try {
-    //       JSON.parse(lines[i]);
-    //       validJsonLines++;
-    //     } catch (e) {
-    //       // Not a valid JSON line
-    //     }
-    //   }
-
-    //   // If most lines are valid JSON, it's probably JSONL
-    //   if (validJsonLines >= Math.max(2, linesToCheck * 0.7)) {
-    //     return "jsonl";
-    //   }
-    // }
+    // check for CSV
+    try {
+      const records = parse(sampleText, {
+        columns: true,
+        skip_empty_lines: true,
+      });
+      return records;
+    } catch (e) {
+      // Not valid CSV
+    }
 
     throw Error("Unsupported format!");
-  }
-
-  // convert to json
-  parseData(data: any, dataType: string) {
-    const text = new TextDecoder().decode(data);
-
-    switch (dataType) {
-      case "json":
-        return JSON.parse(text);
-
-      // case "jsonl":
-      //   try {
-      //     return text
-      //       .split("\n")
-      //       .filter((line) => line.trim())
-      //       .map((line) => JSON.parse(line));
-      //   } catch (e) {
-      //     console.error("Error parsing JSONL:", e);
-      //     return text;
-      //   }
-      // case "csv":
-      //   // You'd use a CSV parser here like PapaParse
-      //   return text.split("\n").map((line) => line.split(","));
-      default:
-        throw new Error("Invalid format!");
-    }
   }
 
   createSchemaFromJsonArray(jsonArray: unknown[]): z.ZodType {

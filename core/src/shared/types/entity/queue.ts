@@ -12,9 +12,3 @@ export enum JobStatus {
   COMPLETED = "completed",
   FAILED = "failed",
 }
-
-export interface QueueJobPayload {
-  type: JobType;
-  payload: any;
-  options: any;
-}

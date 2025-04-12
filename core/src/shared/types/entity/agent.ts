@@ -20,11 +20,10 @@ const EdgeSchema = z.object({
 
 // GraphNode schema
 const GraphNodeSchema = z.object({
-  id: z.string(),
-  type: z.string(),
-  description: z.string(),
-  content: z.string(),
-  edges: z.array(EdgeSchema),
+  id: z.string().uuid(),
+  type: z.string(), // categorical classifer
+  description: z.string(), // human-readable label
+  content: z.string(), // details for the step
   metadata: z.record(z.string(), z.any()).optional(),
 });
 
@@ -32,6 +31,7 @@ const GraphNodeSchema = z.object({
 const ChainOfThoughtSchema = z.object({
   format: z.string(),
   nodes: z.array(GraphNodeSchema),
+  edges: z.array(EdgeSchema),
 });
 
 // ExecutionMetrics schema
