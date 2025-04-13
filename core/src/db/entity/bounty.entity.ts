@@ -13,6 +13,7 @@ import {
   BountyType,
   BountyEvaluationCriteria,
   BountyPrize,
+  BountyDifficulty,
 } from "@odin/core/types";
 import { BountyRepository } from "@odin/core/db";
 
@@ -54,6 +55,12 @@ export class Bounty {
   @Property({ type: "string", nullable: false })
   status: BountyStatus;
 
+  @Property({ type: "string", nullable: false })
+  difficulty: BountyDifficulty;
+
+  @Property({ type: JsonType, nullable: false })
+  tags: string[];
+
   constructor(
     name: string,
     description: string,
@@ -74,5 +81,8 @@ export class Bounty {
     this.prize = prize;
     this.type = type;
     this.status = status;
+    // fix
+    this.difficulty = "Easy";
+    this.tags = [];
   }
 }

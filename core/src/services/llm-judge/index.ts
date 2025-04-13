@@ -10,7 +10,7 @@ import {
 } from "@odin/core/types";
 import fs from "fs";
 import _ from "lodash";
-import { validateSchema } from "@odin/core/utils";
+import { validateSchemaData } from "@odin/core/utils";
 import * as path from "path";
 import Redis from "ioredis";
 import { hash } from "crypto";
@@ -115,7 +115,7 @@ export class LLMJudgeService {
       // @ts-ignore
       const [result] = llmOutput.input;
 
-      if (!validateSchema(orchestrateSchema, result)) {
+      if (!validateSchemaData(orchestrateSchema, result)) {
         throw new Error("Invalid LLM Output");
       }
 
@@ -438,7 +438,7 @@ export class LLMJudgeService {
           }
 
           if (llmResult) {
-            if (!validateSchema(JSON.parse(output_schema), llmResult)) {
+            if (!validateSchemaData(JSON.parse(output_schema), llmResult)) {
               throw new Error("Invalid LLM Output");
             }
 
@@ -509,7 +509,7 @@ export class LLMJudgeService {
       // @ts-ignore
       const [result] = llmOutput.input;
 
-      if (!validateSchema(JSON.parse(output_schema), result)) {
+      if (!validateSchemaData(JSON.parse(output_schema), result)) {
         throw new Error("Invalid LLM Output");
       }
 

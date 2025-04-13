@@ -23,16 +23,23 @@ type QueryOptions = {
 };
 
 export class NexusService {
-  constructor() {}
+  private ipfsGatewayUrl: string;
+
+  constructor(
+    options: {
+      ipfsGatewayUrl?: string;
+    } = {},
+  ) {
+    this.ipfsGatewayUrl =
+      options.ipfsGatewayUrl || "https://gateway.lighthouse.storage/ipfs";
+  }
 
   async retrieveData<T extends z.ZodType = z.ZodType>(
     ipfsHash: string,
   ): Promise<DataContext<T>> {
     // change to support caching
 
-    const response = await fetch(
-      `https://gateway.lighthouse.storage/ipfs/${ipfsHash}`,
-    );
+    const response = await fetch(`${this.ipfsGatewayUrl}/${ipfsHash}`);
 
     if (response.ok) {
       const buffer = await response.arrayBuffer();
@@ -46,6 +53,372 @@ export class NexusService {
     }
 
     throw new Error("Failed to retrieve data");
+  }
+
+  async retrieveDataset<T extends z.ZodType = z.ZodType>(
+    datasetPayload: {
+      name: string;
+      deltaHashes: {
+        hash: string;
+        timestamp: Date;
+        version: number;
+      }[];
+    },
+    options: {
+      limit?: number;
+      offset?: number;
+      filters?: QueryFilter;
+      version?: number;
+      includeVersionHistory?: boolean;
+    } = {},
+  ): Promise<DataContext<T>> {
+    let deltaHashes = [...datasetPayload.deltaHashes].sort(
+      (a, b) => a.version - b.version,
+    );
+
+    if (options.version) {
+      deltaHashes = deltaHashes.filter(
+        (delta) => delta.version <= options.version!,
+      );
+    }
+
+    if (deltaHashes.length === 0) {
+      throw new Error(
+        `No versions available for dataset ${datasetPayload.name}`,
+      );
+    }
+
+    const baseDataContext = await this.retrieveData<T>(deltaHashes[0].hash);
+
+    if (
+      deltaHashes.length === 1 ||
+      (options.version !== undefined &&
+        options.version === deltaHashes[0].version)
+    ) {
+      return this.applyOptionsToContext(baseDataContext, options);
+    }
+
+    let collatedData = baseDataContext.getData();
+    let latestSchema = baseDataContext.getSchema() as T;
+
+    const versionHistory: Record<string, number> = {};
+    if (options.includeVersionHistory) {
+      collatedData.forEach((item: any) => {
+        if (item.id) {
+          versionHistory[item.id] = deltaHashes[0].version;
+        }
+      });
+    }
+
+    for (let i = 1; i < deltaHashes.length; i++) {
+      try {
+        const deltaContext = await this.retrieveData(deltaHashes[i].hash);
+        const deltaData = deltaContext.getData();
+
+        // Check if this is a structured delta package
+        if (
+          deltaData &&
+          typeof deltaData === "object" &&
+          "version" in deltaData &&
+          "records" in deltaData
+        ) {
+          // Apply structured delta
+          collatedData = this.applyStructuredDelta(
+            collatedData,
+            deltaData,
+            options.includeVersionHistory ? versionHistory : undefined,
+            deltaHashes[i].version,
+          );
+        } else {
+          // Apply simple full-replacement approach
+          collatedData = this.applySimpleDelta(
+            collatedData,
+            deltaData,
+            options.includeVersionHistory ? versionHistory : undefined,
+            deltaHashes[i].version,
+          );
+        }
+
+        // Update schema
+        latestSchema = this.mergeSchemas(
+          latestSchema,
+          deltaContext.getSchema(),
+        ) as T;
+      } catch (error) {
+        console.error(
+          `Error retrieving or applying delta ${deltaHashes[i].hash}:`,
+          error,
+        );
+        // Continue with partial data instead of failing completely
+      }
+    }
+
+    if (options.includeVersionHistory) {
+      collatedData = collatedData.map((item: any) => {
+        if (item.id && versionHistory[item.id]) {
+          return {
+            ...item,
+            __version: versionHistory[item.id],
+          };
+        }
+        return item;
+      });
+    }
+
+    // Create the final context with collated data
+    const finalContext = new DataContext<T>(latestSchema, collatedData);
+
+    // Apply filtering and pagination options
+    return this.applyOptionsToContext(finalContext, options);
+  }
+
+  private applyOptionsToContext<T extends z.ZodType>(
+    context: DataContext<T>,
+    options: {
+      limit?: number;
+      offset?: number;
+      filters?: QueryFilter;
+    },
+  ): DataContext<T> {
+    let result = context;
+
+    // Apply filters if specified
+    if (options.filters) {
+      result = new DataContext<T>(
+        result.getSchema(),
+        result.query(options.filters).getRawData(),
+      );
+    }
+
+    // Apply pagination if specified
+    if (options.limit !== undefined) {
+      const offset = options.offset || 0;
+      const data = result.getData().slice(offset, offset + options.limit);
+      result = new DataContext<T>(result.getSchema(), data);
+    }
+
+    return result;
+  }
+
+  private applyStructuredDelta<T>(
+    baseData: T[],
+    delta: any,
+    versionHistory?: Record<string, number>,
+    version?: number,
+  ): T[] {
+    // Create a map of existing data by ID for efficiency
+    const dataMap = new Map<string, any>();
+
+    for (const item of baseData) {
+      const typedItem = item as any;
+      if (typedItem.id) {
+        dataMap.set(typedItem.id, typedItem);
+      }
+    }
+
+    // Process each record in the delta
+    for (const record of delta.records) {
+      const { op, id, data } = record;
+
+      switch (op) {
+        case DeltaOp.ADD:
+          if (data) {
+            dataMap.set(id, data);
+            if (versionHistory && version) {
+              versionHistory[id] = version;
+            }
+          }
+          break;
+
+        case DeltaOp.UPDATE:
+          if (data && dataMap.has(id)) {
+            dataMap.set(id, data);
+            if (versionHistory && version) {
+              versionHistory[id] = version;
+            }
+          }
+          break;
+
+        case DeltaOp.PATCH:
+          if (data && dataMap.has(id)) {
+            const existingItem = dataMap.get(id);
+            if (existingItem) {
+              dataMap.set(id, { ...existingItem, ...data });
+              if (versionHistory && version) {
+                versionHistory[id] = version;
+              }
+            }
+          }
+          break;
+
+        case DeltaOp.DELETE:
+          dataMap.delete(id);
+          if (versionHistory) {
+            delete versionHistory[id];
+          }
+          break;
+      }
+    }
+
+    // Convert map back to array
+    return Array.from(dataMap.values());
+  }
+
+  private applySimpleDelta<T>(
+    baseData: T[],
+    deltaData: any[],
+    versionHistory?: Record<string, number>,
+    version?: number,
+  ): T[] {
+    // Create a map of existing data by ID
+    const dataMap = new Map<string, any>();
+
+    // Initialize with base data
+    for (const item of baseData) {
+      const typedItem = item as any;
+      if (typedItem.id) {
+        dataMap.set(typedItem.id, typedItem);
+      }
+    }
+
+    // Apply updates from delta data
+    for (const item of deltaData) {
+      if (item && item.id) {
+        dataMap.set(item.id, item);
+        if (versionHistory && version) {
+          versionHistory[item.id] = version;
+        }
+      }
+    }
+
+    // Convert map back to array
+    return Array.from(dataMap.values());
+  }
+
+  async paginateDataset<T extends z.ZodType = z.ZodType>(
+    datasetPayload: {
+      name: string;
+      deltaHashes: {
+        hash: string;
+        timestamp: Date;
+        version: number;
+      }[];
+    },
+    options: {
+      cursor?: string;
+      limit?: number;
+      filters?: QueryFilter;
+      sortField?: string;
+      sortDirection?: "ASC" | "DESC";
+    } = {},
+  ): Promise<{
+    data: z.infer<T>[];
+    nextCursor: string | null;
+    totalCount: number;
+    schema: T;
+  }> {
+    // Decode cursor if provided
+    const decodedCursor = options.cursor
+      ? this.decodeCursor(options.cursor)
+      : null;
+
+    // Set up efficient retrieval options
+    const retrievalOptions: any = {
+      filters: options.filters,
+      limit: options.limit ? options.limit + 1 : 101, // Get one extra for next cursor
+    };
+
+    // If cursor exists, add it to filter
+    if (decodedCursor && options.sortField) {
+      const cursorFilter = {
+        [options.sortField]: {
+          [options.sortDirection === "DESC" ? "$lt" : "$gt"]:
+            decodedCursor.value,
+        },
+      };
+
+      // Combine with existing filters
+      retrievalOptions.filters = options.filters
+        ? { $and: [options.filters, cursorFilter] }
+        : cursorFilter;
+    }
+
+    // Retrieve the data
+    const dataContext = await this.retrieveDataset<T>(
+      datasetPayload,
+      retrievalOptions,
+    );
+    const data = dataContext.getData();
+    const schema = dataContext.getSchema();
+
+    // Determine if there's a next page
+    let nextCursor: string | null = null;
+    let resultData = data;
+
+    if (options.limit && data.length > options.limit) {
+      // We fetched one extra record to see if there's more
+      resultData = data.slice(0, options.limit);
+
+      // Create cursor from last returned record
+      const lastRecord = resultData[resultData.length - 1];
+      if (lastRecord && options.sortField) {
+        const value = (lastRecord as any)[options.sortField];
+        nextCursor = this.encodeCursor({
+          field: options.sortField,
+          value,
+        });
+      }
+    }
+
+    // Get total count (may require an additional request depending on implementation)
+    const totalCount = await this.getDatasetTotalCount(
+      datasetPayload,
+      options.filters,
+    );
+
+    return {
+      data: resultData,
+      nextCursor,
+      totalCount,
+      schema,
+    };
+  }
+
+  private async getDatasetTotalCount(
+    datasetPayload: {
+      name: string;
+      deltaHashes: {
+        hash: string;
+        timestamp: Date;
+        version: number;
+      }[];
+    },
+    filters?: QueryFilter,
+  ): Promise<number> {
+    // Placeholder implementation - this could be optimized in a real implementation
+    // by using database metadata or cached counts
+    try {
+      // If filters are applied, we need to actually count the filtered data
+      const context = await this.retrieveDataset(datasetPayload, { filters });
+      return context.getData().length;
+    } catch (error) {
+      console.error(
+        `Error getting total count for dataset ${datasetPayload.name}:`,
+        error,
+      );
+      return 0;
+    }
+  }
+
+  private encodeCursor(cursor: { field: string; value: any }): string {
+    return Buffer.from(JSON.stringify(cursor)).toString("base64");
+  }
+
+  /**
+   * Decode pagination cursor
+   */
+  private decodeCursor(encodedCursor: string): { field: string; value: any } {
+    return JSON.parse(Buffer.from(encodedCursor, "base64").toString("utf-8"));
   }
 
   parseData(data: Uint8Array): any {

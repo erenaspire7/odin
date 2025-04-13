@@ -20,7 +20,7 @@ import {
 } from "crypto";
 import { ethers } from "ethers";
 import lighthouse from "@lighthouse-web3/sdk";
-import { validateSchema } from "@odin/core/utils";
+import { validateSchemaData } from "@odin/core/utils";
 import { QueueService } from "@odin/core/services";
 
 export class AgentService {
@@ -70,7 +70,7 @@ export class AgentService {
 
     switch (format) {
       case "json":
-        if (!validateSchema(schema, finalAnswer)) {
+        if (!validateSchemaData(schema, finalAnswer)) {
           throw new Error("Invalid JSON");
         }
 

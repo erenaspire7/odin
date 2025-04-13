@@ -29,6 +29,8 @@ const BountyPrizeDistributionEnum = z.enum([
   "custom",
 ]);
 
+const BountyDifficultyEnum = z.enum(["Easy", "Medium", "Hard"]);
+
 export const BountyExpectedOutputSchema = z.object({
   format: BountyExpectedOutputFormatEnum,
   schema: z.record(z.string(), z.any()),
@@ -57,3 +59,5 @@ export type BountyEvaluationCriteria = z.infer<
 >;
 
 export type BountyPrize = z.infer<typeof BountyPrizeSchema>;
+
+export type BountyDifficulty = z.infer<typeof BountyDifficultyEnum>;

@@ -59,6 +59,6 @@ export const AgenticResponseHeaderSchema = z.object({
 export type AgenticResponseType = z.infer<typeof AgenticResponseSchema>;
 // type ExecutionMetricsType = z.infer<typeof ExecutionMetricsSchema>;
 // type ChainOfThoughtType = z.infer<typeof ChainOfThoughtSchema>;
-// type GraphNodeType = z.infer<typeof GraphNodeSchema>;
+export type GraphNodeType = z.infer<typeof GraphNodeSchema>;
 // type EdgeType = z.infer<typeof EdgeSchema>;
 // type EdgeRelationshipType = z.infer<typeof EdgeRelationshipEnum>;
