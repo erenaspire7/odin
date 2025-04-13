@@ -6,7 +6,6 @@ import {
   DeltaHash,
   DeltaHashRepository,
 } from "@odin/core/db";
-import Redis from "ioredis";
 import { RequestContext } from "@mikro-orm/core";
 import {
   validateSchema,
@@ -17,7 +16,7 @@ import lighthouse from "@lighthouse-web3/sdk";
 
 export class DatasetService {
   private client: Anthropic;
-  private redis: Redis;
+
   private datasetRepository: DatasetRepository;
   private deltaHashRepository: DeltaHashRepository;
 
@@ -25,8 +24,6 @@ export class DatasetService {
     this.client = new Anthropic({
       apiKey: process.env.ANTHROPIC_API_KEY,
     });
-
-    this.redis = new Redis(process.env.REDIS_URL!);
 
     this.datasetRepository =
       RequestContext.getEntityManager()!.getRepository(Dataset);

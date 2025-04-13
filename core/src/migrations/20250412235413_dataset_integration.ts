@@ -3,8 +3,12 @@ import type { Knex } from "knex";
 export async function up(knex: Knex): Promise<void> {
   await Promise.all([
     // Create Dataset table
-    await knex.schema.createTable("Dataset", (table) => {
-      table.uuid("datasetId").primary();
+    await knex.schema.withSchema("odin").createTable("Dataset", (table) => {
+      table
+        .uuid("datasetId")
+        .notNullable()
+        .primary()
+        .defaultTo(knex.raw("uuid_generate_v1mc()"));
       table.string("name").notNullable();
       table.text("description").nullable();
       table.jsonb("schema").notNullable();
@@ -12,8 +16,12 @@ export async function up(knex: Knex): Promise<void> {
       table.timestamp("updated_at").notNullable().defaultTo(knex.fn.now());
     }),
     // Create DeltaHash table
-    await knex.schema.createTable("DeltaHash", (table) => {
-      table.uuid("id").primary().defaultTo(knex.raw("uuid_generate_v1mc()"));
+    await knex.schema.withSchema("odin").createTable("DeltaHash", (table) => {
+      table
+        .uuid("id")
+        .notNullable()
+        .primary()
+        .defaultTo(knex.raw("uuid_generate_v1mc()"));
       table
         .uuid("datasetId")
         .notNullable()
@@ -24,13 +32,13 @@ export async function up(knex: Knex): Promise<void> {
       table.integer("version").notNullable();
 
       // Optional: Add a composite index on dataset_id and version
-      table.unique(["dataset_id", "version"]);
+      // table.unique(["dataset_id", "version"]);
     }),
   ]);
 }
 
 export async function down(knex: Knex): Promise<void> {
   // Drop tables in reverse order to handle foreign key constraints
-  await knex.schema.dropTableIfExists("delta_hash");
-  await knex.schema.dropTableIfExists("dataset");
+  await knex.schema.withSchema("odin").dropTable("DeltaHash");
+  await knex.schema.withSchema("odin").dropTable("Dataset");
 }

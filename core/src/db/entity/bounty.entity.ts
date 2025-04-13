@@ -71,6 +71,8 @@ export class Bounty {
     prize: BountyPrize,
     type: BountyType,
     status: BountyStatus,
+    difficulty: BountyDifficulty,
+    tags: string[]
   ) {
     this.name = name;
     this.description = description;
@@ -82,7 +84,7 @@ export class Bounty {
     this.type = type;
     this.status = status;
     // fix
-    this.difficulty = "Easy";
-    this.tags = [];
+    this.difficulty = difficulty;
+    this.tags = tags;
   }
 }

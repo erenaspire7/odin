@@ -4,6 +4,7 @@ import { useAppKit, useAppKitAccount } from "@reown/appkit/react";
 import Header from "./header";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
+import { Toaster } from "@/components/ui/sonner"
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { open } = useAppKit();
@@ -67,6 +68,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           >
             {children}
           </main>
+          <Toaster />
         </div>
       ) : (
         <Header />

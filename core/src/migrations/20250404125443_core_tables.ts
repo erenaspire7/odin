@@ -3,15 +3,22 @@ import type { Knex } from "knex";
 export async function up(knex: Knex): Promise<void> {
   await Promise.all([
     await knex.schema.withSchema("odin").createTable("User", (table) => {
-      table.uuid("userId").notNullable().primary();
+      table
+        .uuid("userId")
+        .notNullable()
+        .primary()
+        .defaultTo(knex.raw("uuid_generate_v1mc()"));
       table.string("walletAddress").notNullable().unique();
       table.string("name").nullable();
       table.timestamp("createdAt").notNullable().defaultTo(knex.fn.now());
       table.timestamp("updatedAt").notNullable().defaultTo(knex.fn.now());
     }),
     await knex.schema.withSchema("odin").createTable("Bounty", (table) => {
-      table.uuid("bountyId").notNullable().primary();
-
+      table
+        .uuid("bountyId")
+        .notNullable()
+        .primary()
+        .defaultTo(knex.raw("uuid_generate_v1mc()"));
       table
         .uuid("creatorId")
         .notNullable()
@@ -34,7 +41,11 @@ export async function up(knex: Knex): Promise<void> {
     }),
 
     await knex.schema.withSchema("odin").createTable("Agent", (table) => {
-      table.uuid("agentId").notNullable().primary();
+      table
+        .uuid("agentId")
+        .notNullable()
+        .primary()
+        .defaultTo(knex.raw("uuid_generate_v1mc()"));
       table
         .uuid("bountyId")
         .notNullable()

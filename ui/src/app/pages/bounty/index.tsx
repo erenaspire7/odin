@@ -31,36 +31,50 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { CreateBountyDialog } from "./form";
+import { get } from "@/lib/api";
 
-const activeBounties = [
+const sampleActiveBounties = [
   {
-    id: 1,
-    title: "Smart Contract Security Audit",
+    bountyId: 1,
+    name: "Smart Contract Security Audit",
     description: "Perform a security audit on our new DeFi smart contract",
     reward: "0.35 ETH",
-    deadline: "Apr 25, 2025",
+    prize: {
+      amount: 0.05,
+      description: "Prize for the best article",
+    },
+    expiresAt: "Apr 25, 2025",
     participants: 3,
     difficulty: "Hard",
     tags: ["Security", "Solidity", "Audit"],
   },
   {
-    id: 2,
-    title: "UI Design for NFT Marketplace",
+    bountyId: 2,
+    name: "UI Design for NFT Marketplace",
     description:
       "Create a clean and modern UI design for our upcoming NFT marketplace",
     reward: "0.25 ETH",
-    deadline: "Apr 30, 2025",
+    prize: {
+      amount: 0.05,
+      description: "Prize for the best article",
+    },
+    expiresAt: "Apr 30, 2025",
     participants: 7,
     difficulty: "Medium",
     tags: ["Design", "UI/UX", "NFT"],
   },
   {
-    id: 3,
-    title: "Optimize Gas Usage for Contract",
+    bountyId: 3,
+    name: "Optimize Gas Usage for Contract",
     description: "Find ways to optimize gas usage in our token contract",
     reward: "0.18 ETH",
-    deadline: "May 5, 2025",
+    prize: {
+      amount: 0.05,
+      description: "Prize for the best article",
+    },
+    expiresAt: "May 5, 2025",
     participants: 2,
     difficulty: "Medium",
     tags: ["Optimization", "Solidity", "Gas"],
@@ -69,28 +83,51 @@ const activeBounties = [
 
 const enrolledBounties = [
   {
-    id: 4,
-    title: "Implement Zero-Knowledge Proof",
+    bountyId: 4,
+    name: "Implement Zero-Knowledge Proof",
     description:
       "Implement a ZKP solution for our identity verification system",
     reward: "0.45 ETH",
-    deadline: "May 1, 2025",
+    prize: {
+      amount: 0.05,
+      description: "Prize for the best article",
+    },
+    expiresAt: "May 1, 2025",
     status: "In Progress",
     submissionDate: "Apr 28, 2025",
     difficulty: "Hard",
     tags: ["zkSNARK", "Privacy", "Cryptography"],
   },
   {
-    id: 5,
-    title: "Create Educational Content for Blockchain",
+    bountyId: 5,
+    name: "Create Educational Content for Blockchain",
     description:
       "Create a series of educational articles about blockchain technology",
     reward: "0.15 ETH",
-    deadline: "Apr 20, 2025",
+    prize: {
+      amount: 0.05,
+      description: "Prize for the best article",
+    },
+    expiresAt: "Apr 20, 2025",
     status: "Submitted",
     submissionDate: "Apr 18, 2025",
     difficulty: "Easy",
     tags: ["Education", "Content", "Blockchain"],
+  },
+];
+
+const draftBounties = [
+  {
+    bountyId: 6,
+    name: "Lorem Ipsum",
+    description:
+      "Implement a ZKP solution for our identity verification system",
+    reward: "0.45 ETH",
+    expiresAt: "May 1, 2025",
+    status: "In Progress",
+    submissionDate: "Apr 28, 2025",
+    difficulty: "Hard",
+    tags: ["zkSNARK", "Privacy", "Cryptography"],
   },
 ];
 
@@ -123,6 +160,15 @@ const getStatusColor = (status) => {
 export default function Bounty() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
+  const [activeBounties, setActiveBounties] = useState([]);
+
+  useEffect(() => {
+    get("bounty/all", { status: "active" }).then((data) => {
+      console.log(data);
+      setActiveBounties(data);
+    });
+  }, []);
+
   return (
     <Layout>
       <div className="container mx-auto p-6 max-w-7xl">
@@ -135,71 +181,8 @@ export default function Bounty() {
               </Button>
             </DialogTrigger>
 
-            <DialogContent className="sm:max-w-[550px]">
-              <DialogHeader>
-                <DialogTitle>Create New Bounty</DialogTitle>
-                <DialogDescription>
-                  Fill in the details to create a new bounty for the community.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="title">Title</Label>
-                  <Input id="title" placeholder="Enter bounty title" />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    placeholder="Describe what needs to be done"
-                    rows={4}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="reward">Reward (ETH)</Label>
-                    <Input
-                      id="reward"
-                      placeholder="0.00"
-                      type="number"
-                      step="0.01"
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="deadline">Deadline</Label>
-                    <Input id="deadline" type="date" />
-                  </div>
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="tags">Tags (comma separated)</Label>
-                  <Input
-                    id="tags"
-                    placeholder="e.g., Design, Smart Contract, Security"
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="difficulty">Difficulty</Label>
-                  <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
-                    <option>Easy</option>
-                    <option>Medium</option>
-                    <option>Hard</option>
-                  </select>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button
-                  variant="outline"
-                  onClick={() => setIsCreateModalOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button onClick={() => setIsCreateModalOpen(false)}>
-                  Create Bounty
-                </Button>
-              </DialogFooter>
-            </DialogContent>
+            <CreateBountyDialog setIsCreateModalOpen={setIsCreateModalOpen} />
           </Dialog>
-          Hello
         </div>
 
         <Tabs defaultValue="active" className="w-full">
@@ -222,20 +205,20 @@ export default function Bounty() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {activeBounties.map((bounty) => (
                 <Card
-                  key={bounty.id}
+                  key={bounty.bountyId}
                   className="overflow-hidden border-2 hover:border-primary/50 transition-colors"
                 >
                   <CardHeader className="pb-2">
                     <div className="flex justify-between items-start">
                       <CardTitle className="line-clamp-1">
-                        {bounty.title}
+                        {bounty.name}
                       </CardTitle>
                       <Badge
                         variant="outline"
                         className="flex items-center gap-1"
                       >
                         <Award size={12} />
-                        {bounty.reward}
+                        {bounty.prize.amount} ETH
                       </Badge>
                     </div>
                     <CardDescription className="line-clamp-2">
@@ -253,7 +236,7 @@ export default function Bounty() {
                     <div className="flex items-center justify-between text-sm text-muted-foreground">
                       <div className="flex items-center gap-1">
                         <Clock size={14} />
-                        <span>{bounty.deadline}</span>
+                        <span>{new Date(bounty.expiresAt).toUTCString()}</span>
                       </div>
                       <div className="flex items-center gap-1">
                         <Users size={14} />
@@ -278,13 +261,13 @@ export default function Bounty() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {enrolledBounties.map((bounty) => (
                 <Card
-                  key={bounty.id}
+                  key={bounty.bountyId}
                   className="overflow-hidden border-2 hover:border-primary/50 transition-colors"
                 >
                   <CardHeader className="pb-2">
                     <div className="flex justify-between items-start">
                       <CardTitle className="line-clamp-1">
-                        {bounty.title}
+                        {bounty.name}
                       </CardTitle>
                       <Badge
                         variant="outline"
@@ -309,7 +292,7 @@ export default function Bounty() {
                     <div className="flex items-center justify-between text-sm text-muted-foreground">
                       <div className="flex items-center gap-1">
                         <Clock size={14} />
-                        <span>{bounty.deadline}</span>
+                        <span>{bounty.expiresAt}</span>
                       </div>
                       <Badge
                         className={`${getStatusColor(bounty.status)} border-none text-xs`}
@@ -331,6 +314,57 @@ export default function Bounty() {
                         View Submission
                       </Button>
                     )}
+                  </CardFooter>
+                </Card>
+              ))}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="draft" className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {draftBounties.map((bounty) => (
+                <Card
+                  key={bounty.bountyId}
+                  className="overflow-hidden border-2 hover:border-primary/50 transition-colors"
+                >
+                  <CardHeader className="pb-2">
+                    <div className="flex justify-between items-start">
+                      <CardTitle className="line-clamp-1">
+                        {bounty.name}
+                      </CardTitle>
+                      <Badge
+                        variant="outline"
+                        className="flex items-center gap-1"
+                      >
+                        <Award size={12} />
+                        {bounty.reward}
+                      </Badge>
+                    </div>
+                    <CardDescription className="line-clamp-2">
+                      {bounty.description}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="pb-2">
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      {bounty.tags.map((tag, i) => (
+                        <Badge key={i} variant="secondary" className="text-xs">
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                    <div className="flex items-center justify-between text-sm text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <Clock size={14} />
+                        <span>{bounty.expiresAt}</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                  <CardFooter className="pt-2 flex justify-end space-x-4">
+                    <Button size="sm">Modify Bounty</Button>
+
+                    <Button size="sm" variant="outline">
+                      Initiate Bounty
+                    </Button>
                   </CardFooter>
                 </Card>
               ))}

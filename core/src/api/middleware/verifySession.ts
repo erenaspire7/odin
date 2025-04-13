@@ -12,7 +12,12 @@ export const verifySession = (
   done: HookHandlerDoneFunction,
 ) => {
   // @ts-ignore
-  if (!request.session.siwe) {
+  let siweData = request.session.get("siwe");
+
+  // @ts-ignore
+  if (!siweData) {
     return reply.status(401).send({ error: "Authentication expired" });
   }
+
+  done();
 };

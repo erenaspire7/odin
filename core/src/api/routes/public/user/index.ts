@@ -7,6 +7,7 @@ import {
   getChainIdFromMessage,
 } from "@reown/appkit-siwe";
 import { createPublicClient, http } from "viem";
+import { rm } from "node:fs";
 
 const projectId = process.env.APPKIT_PROJECT_ID!;
 
@@ -53,7 +54,12 @@ export default async function (fastify: FastifyInstance) {
       await userService.register({ walletAddress: address });
 
       // @ts-ignore
-      request.session.siwe = { address, chainId };
+      request.session.set('siwe', { address, chainId });
+      
+      // @ts-ignore
+      console.log('Just set:', request.session.get('siwe'));
+
+      // @ts-ignore
       request.session.save(() => reply.status(200).send(true));
     } catch (err) {
       // @ts-ignore

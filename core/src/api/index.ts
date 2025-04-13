@@ -4,8 +4,50 @@ import AutoLoad from "@fastify/autoload";
 import FastifySession from "@fastify/session";
 import FastifyCookie from "@fastify/cookie";
 import FastifyCors from "@fastify/cors";
-
 import { verifySession } from "./middleware/verifySession";
+import fs from "fs";
+
+const sessionDir = path.join( "/home/erenaspire7/Projects/personal/odin/core/tmp");
+if (!fs.existsSync(sessionDir)) {
+  fs.mkdirSync(sessionDir);
+}
+
+// Simple file-based session store
+const fileStore = {
+  get: (sessionId: any, callback: any) => {
+    const sessionPath = path.join(sessionDir, `${sessionId}.json`);
+    try {
+      if (fs.existsSync(sessionPath)) {
+        const data = JSON.parse(fs.readFileSync(sessionPath, "utf8"));
+        callback(null, data);
+      } else {
+        callback(null, null);
+      }
+    } catch (err) {
+      callback(err, null);
+    }
+  },
+  set: (sessionId: any, session: any, callback: any) => {
+    const sessionPath = path.join(sessionDir, `${sessionId}.json`);
+    try {
+      fs.writeFileSync(sessionPath, JSON.stringify(session));
+      callback();
+    } catch (err) {
+      callback(err);
+    }
+  },
+  destroy: (sessionId: any, callback: any) => {
+    const sessionPath = path.join(sessionDir, `${sessionId}.json`);
+    try {
+      if (fs.existsSync(sessionPath)) {
+        fs.unlinkSync(sessionPath);
+      }
+      callback();
+    } catch (err) {
+      callback(err);
+    }
+  },
+};
 
 /* eslint-disable-next-line */
 export interface AppOptions {}
@@ -21,6 +63,7 @@ export async function app(fastify: FastifyInstance, opts: AppOptions) {
 
   fastify.register(FastifyCookie);
   fastify.register(FastifySession, {
+    store: fileStore,
     cookieName: "siwe-quickstart",
     secret: process.env.APP_SECRET!,
     saveUninitialized: true,

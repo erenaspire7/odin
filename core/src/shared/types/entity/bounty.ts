@@ -29,7 +29,7 @@ const BountyPrizeDistributionEnum = z.enum([
   "custom",
 ]);
 
-const BountyDifficultyEnum = z.enum(["Easy", "Medium", "Hard"]);
+export const BountyDifficultyEnum = z.enum(["Easy", "Medium", "Hard"]);
 
 export const BountyExpectedOutputSchema = z.object({
   format: BountyExpectedOutputFormatEnum,

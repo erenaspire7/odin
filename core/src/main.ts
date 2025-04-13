@@ -20,6 +20,10 @@ async function bootstrap() {
     RequestContext.create(orm.em, done);
   });
 
+  server.addHook("onResponse", async (request, reply) => {
+    await orm.em.flush();
+  });
+
   // shut down the connection when closing the app
   server.addHook("onClose", async () => {
     await orm.close();
@@ -31,7 +35,7 @@ async function bootstrap() {
   const url = await server.listen({ port });
 
   console.log(`server started at ${url}`);
-  
+
   // Initialize QueueService
   new QueueService(orm.em);
 

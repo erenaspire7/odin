@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { parse } from "csv-parse";
+import { DeltaOp } from "@odin/core/utils";
 
 type ComparisonOperator =
   | "$eq"
