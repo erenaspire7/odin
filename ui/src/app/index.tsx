@@ -1,12 +1,17 @@
 import { createAppKit } from "@reown/appkit/react";
 import { EthersAdapter } from "@reown/appkit-adapter-ethers";
-import { base, baseSepolia, AppKitNetwork } from "@reown/appkit/networks";
+import { baseSepolia, AppKitNetwork } from "@reown/appkit/networks";
 import { createSIWE } from "./../lib/siwe";
 
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { SidebarProvider } from "@/components/ui/sidebar";
 
 import Home from "./pages/home";
+import Bounty from "./pages/bounty";
+import DatasetsPage from "./pages/datasets";
+import ProfilePage from "./pages/profile";
+import NotificationsPage from "./pages/notification";
+import AgentCanvasUI from './pages/agent-canvas'
 
 // 1. Get projectId
 const projectId = import.meta.env.VITE_APPKIT_PROJECT_ID;
@@ -43,6 +48,11 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/bounty" element={<Bounty />} />
+          <Route path="/datasets" element={<DatasetsPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/notifications" element={<NotificationsPage />} />
+          <Route path='/agent-canvas' element={<AgentCanvasUI />} />
         </Routes>
       </BrowserRouter>
     </SidebarProvider>

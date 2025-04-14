@@ -1,31 +1,42 @@
-import {  SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { useAppKit, useAppKitAccount } from "@reown/appkit/react";
 import Header from "./header";
 import { Button } from "@/components/ui/button";
-import { Menu } from "lucide-react";
-import { useSidebar } from "@/components/ui/sidebar";
+import { useState, useEffect } from "react";
+import { Toaster } from "@/components/ui/sonner"
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { open } = useAppKit();
   const { isConnected } = useAppKitAccount();
+  const { state } = useSidebar();
 
-  const { toggleSidebar } = useSidebar();
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Handle initial loading state
+  useEffect(() => {
+    // Wait for authentication state to stabilize
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 1000); // Short delay to allow auth to initialize
+
+    return () => clearTimeout(timer);
+  }, [isConnected]);
+
+  if (isLoading) {
+    return (
+      <div className="w-full text-black dark min-h-screen flex items-center justify-center">
+        <div className="animate-pulse">Loading...</div>
+      </div>
+    );
+  }
 
   return (
-    <div className="dark min-h-screen text-white overflow-hidden flex flex-col">
-      <nav className="flex w-full z-40 p-6 bg-black items-center">
+    <div className="dark min-h-screen text-white overflow-hidden flex flex-col grow">
+      <nav className="fixed top-0 flex w-full z-40 p-6 bg-black items-center">
         {isConnected && (
           <div className="flex justify-between items-center mr-20">
-            {/* <Button
-              variant="outline"
-              size="icon"
-              onClick={() => toggleSidebar()}
-            >
-              <Menu />
-            </Button> */}
             <SidebarTrigger />
-
           </div>
         )}
         <div className="w-screen mx-auto flex justify-between items-center">
@@ -50,11 +61,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       </nav>
 
       {isConnected ? (
-        <div className="mt-32">
+        <div className="pt-30 w-full">
           <AppSidebar />
-          <main>
+          <main
+            className={`${state == "expanded" ? "ml-72" : "ml-20"} font-inter pr-8`}
+          >
             {children}
           </main>
+          <Toaster />
         </div>
       ) : (
         <Header />

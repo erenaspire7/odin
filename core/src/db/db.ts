@@ -1,6 +1,6 @@
 import { MikroORM, EntityCaseNamingStrategy } from "@mikro-orm/postgresql";
 
-import { User, Bounty, Agent } from "./entity";
+import { User, Bounty, Agent, Dataset, DeltaHash } from "./entity";
 
 export async function initMikroORM() {
   const orm = await MikroORM.init({
@@ -9,7 +9,7 @@ export async function initMikroORM() {
     password: process.env.DB_PASS,
     host: process.env.DB_HOST,
     port: Number(process.env.DB_PORT ?? 5432),
-    entities: [User, Bounty, Agent],
+    entities: [User, Bounty, Agent, Dataset, DeltaHash],
     pool: {
       min: 2,
       max: 10,
@@ -17,7 +17,7 @@ export async function initMikroORM() {
     schema: "odin",
     namingStrategy: EntityCaseNamingStrategy,
     discovery: { disableDynamicFileAccess: true },
-  });
+  }); 
 
   return orm;
 }

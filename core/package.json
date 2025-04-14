@@ -4,7 +4,7 @@
   "scripts": {
     "migrate": "yarn knex migrate:latest",
     "rollback": "yarn knex migrate:rollback --all",
-    "start:dev": "yarn ts-node -r tsconfig-paths/register src/main.ts",
+    "start:dev": "yarn nodemon -r tsconfig-paths/register src/main.ts --ignore ./tmp/",
     "start:prod": "node dist/main.js",
     "poll": "yarn ts-node -r tsconfig-paths/register src/workers/processQueue.ts",
     "build": "rm -rf dist && yarn ts-node build.js && yarn run migrate"
@@ -13,6 +13,7 @@
     "@types/lodash": "^4.17.16",
     "@types/node": "^22.14.0",
     "esbuild": "^0.25.2",
+    "nodemon": "^3.1.9",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.8.2"
@@ -44,6 +45,7 @@
     "redis": "^4.7.0",
     "siwe": "^3.0.0",
     "viem": "^2.26.3",
-    "zod": "^3.24.2"
+    "zod": "^3.24.2",
+    "zod-to-json-schema": "^3.24.5"
   }
 }

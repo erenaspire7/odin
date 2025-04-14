@@ -5,6 +5,7 @@ import {
   BountyEvaluationCriteriaSchema,
   BountyPrizeSchema,
   BountyStatusSchema,
+  BountyDifficultyEnum
 } from "@odin/core/types";
 
 export interface RegisterUserPayload {
@@ -27,8 +28,10 @@ export const CreateBountyPayloadSchema = z.object({
   evaluationCriteria: BountyEvaluationCriteriaSchema,
   prize: BountyPrizeSchema,
   type: BountyTypeSchema,
-  expiresAt: z.date(),
+  expiresAt: z.coerce.date(),
   status: BountyStatusSchema,
+  difficulty: BountyDifficultyEnum,
+  tags: z.array(z.string().min(2).max(100)),
 });
 
 export type CreateBountyPayload = z.infer<typeof CreateBountyPayloadSchema>;

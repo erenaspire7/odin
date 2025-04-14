@@ -1,5 +1,4 @@
-import { Home, Inbox, Anvil, Settings, CircleUser } from "lucide-react";
-
+import { Home, Anvil, Database, CircleUser, Bell } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -10,54 +9,64 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { Link, useLocation } from "react-router-dom";
 
 // Menu items.
 const items = [
   {
     title: "Home",
-    url: "#",
+    url: "/",
     icon: Home,
   },
   {
     title: "Bounties",
-    url: "#",
+    url: "/bounty",
     icon: Anvil,
   },
   {
-    title: "Your Submissions",
-    url: "#",
-    icon: Inbox,
+    title: "Notifications",
+    url: "/notifications",
+    icon: Bell,
+  },
+  {
+    title: "Datasets",
+    url: "/datasets",
+    icon: Database,
   },
   {
     title: "Profile",
-    url: "#",
+    url: "/profile",
     icon: CircleUser,
-  },
-  {
-    title: "Settings",
-    url: "#",
-    icon: Settings,
   },
 ];
 
 export function AppSidebar() {
+  const location = useLocation();
+
   return (
-    <Sidebar className="font-inter  pt-20" collapsible="icon">
+    <Sidebar className="font-inter pt-20" collapsible="icon">
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>Application</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <a href={item.url}>
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </a>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {items.map((item) => {
+                const isActive = location.pathname === item.path;
+
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild>
+                      <Link
+                        to={item.url}
+                        className={isActive ? "text-primary" : ""}
+                      >
+                        <item.icon />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

@@ -49,7 +49,7 @@ const verifyMessage = async ({ message, signature }: SIWEVerifyMessageArgs) => {
       body: JSON.stringify({ message, signature }),
       credentials: "include",
     });
-
+    
     if (!response.ok) {
       return false;
     }
@@ -57,6 +57,7 @@ const verifyMessage = async ({ message, signature }: SIWEVerifyMessageArgs) => {
     const result = await response.json();
     return result === true;
   } catch (error) {
+    console.error(error);
     return false;
   }
 };
@@ -77,8 +78,8 @@ const getSession = async () => {
 
   const isValidData =
     typeof data === "object" &&
-    typeof data.address === "string" &&
-    typeof data.chainId === "number";
+    typeof data?.address === "string" &&
+    typeof data?.chainId === "number";
 
   return isValidData ? (data as SIWESession) : null;
 };
@@ -116,6 +117,8 @@ export const createSIWE = (chains: [AppKitNetwork, ...AppKitNetwork[]]) => {
     getSession,
     verifyMessage,
     signOut,
-    // onSignIn: (session?: SIWESession) => {},
+    onSignIn: (session?: SIWESession) => {
+      console.log(session)
+    },
   });
 };

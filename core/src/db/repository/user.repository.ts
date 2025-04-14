@@ -6,11 +6,12 @@ export class UserRepository extends EntityRepository<User> {
   createUser(input: RegisterUserPayload) {
     const { walletAddress } = input;
     const user = new User(walletAddress);
+
     this.getEntityManager().persist(user);
 
     return user;
   }
-  
+
   async getUser(walletAddress: string) {
     return this.findOne({ walletAddress });
   }
