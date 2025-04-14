@@ -6,11 +6,11 @@ export class DatasetRepository extends EntityRepository<Dataset> {
     return await this.findOne({ datasetId });
   }
 
-  createDataset(input: any) {
+  async createDataset(input: any) {
     const { name, schema, description } = input;
 
     const entry = new Dataset(name, schema, description);
-    this.getEntityManager().persist(entry);
+    await this.getEntityManager().persistAndFlush(entry);
 
     return entry;
   }

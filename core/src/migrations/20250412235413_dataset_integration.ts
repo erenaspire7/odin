@@ -12,8 +12,8 @@ export async function up(knex: Knex): Promise<void> {
       table.string("name").notNullable();
       table.text("description").nullable();
       table.jsonb("schema").notNullable();
-      table.timestamp("created_at").notNullable().defaultTo(knex.fn.now());
-      table.timestamp("updated_at").notNullable().defaultTo(knex.fn.now());
+      table.timestamp("createdAt").notNullable().defaultTo(knex.fn.now());
+      table.timestamp("updatedAt").notNullable().defaultTo(knex.fn.now());
     }),
     // Create DeltaHash table
     await knex.schema.withSchema("odin").createTable("DeltaHash", (table) => {
@@ -30,6 +30,7 @@ export async function up(knex: Knex): Promise<void> {
       table.string("hash").notNullable();
       table.timestamp("timestamp").notNullable();
       table.integer("version").notNullable();
+      table.integer("totalRecords").notNullable();
 
       // Optional: Add a composite index on dataset_id and version
       // table.unique(["dataset_id", "version"]);

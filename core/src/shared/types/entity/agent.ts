@@ -28,8 +28,7 @@ const GraphNodeSchema = z.object({
 });
 
 // ChainOfThought schema
-const ChainOfThoughtSchema = z.object({
-  format: z.string(),
+export const ChainOfThoughtSchema = z.object({
   nodes: z.array(GraphNodeSchema),
   edges: z.array(EdgeSchema),
 });

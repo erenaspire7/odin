@@ -1,4 +1,4 @@
-import { DeltaHash } from "@odin/core/db";
+import { Dataset, DeltaHash } from "@odin/core/db";
 import { EntityRepository, wrap } from "@mikro-orm/core";
 
 export class DeltaHashRepository extends EntityRepository<DeltaHash> {
@@ -14,8 +14,24 @@ export class DeltaHashRepository extends EntityRepository<DeltaHash> {
       },
     );
   }
-  
-  async log({}) {
-    
+
+  async log(input: {
+    dataset: Dataset;
+    hash: string;
+    timestamp: Date;
+    version: number;
+    totalRecords: number;
+  }) {
+    const { dataset, hash, timestamp, version, totalRecords } = input;
+    const deltaHash = new DeltaHash(
+      dataset,
+      hash,
+      timestamp,
+      version,
+      totalRecords,
+    );
+    await this.getEntityManager().persistAndFlush(deltaHash);
+
+    return deltaHash;
   }
 }

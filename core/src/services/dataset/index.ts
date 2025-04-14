@@ -6,13 +6,15 @@ import {
   DeltaHash,
   DeltaHashRepository,
 } from "@odin/core/db";
-import { RequestContext } from "@mikro-orm/core";
+import { EntityManager } from "@mikro-orm/core";
 import {
   validateSchema,
   validateSchemaData,
   DeltaUtils,
 } from "@odin/core/utils";
 import lighthouse from "@lighthouse-web3/sdk";
+import { randomUUID } from "crypto";
+import { NexusService } from "@odin/core/services";
 
 export class DatasetService {
   private client: Anthropic;
@@ -20,16 +22,14 @@ export class DatasetService {
   private datasetRepository: DatasetRepository;
   private deltaHashRepository: DeltaHashRepository;
 
-  constructor() {
+  constructor(entityManager: EntityManager) {
     this.client = new Anthropic({
       apiKey: process.env.ANTHROPIC_API_KEY,
     });
 
-    this.datasetRepository =
-      RequestContext.getEntityManager()!.getRepository(Dataset);
+    this.datasetRepository = entityManager.getRepository(Dataset);
 
-    this.deltaHashRepository =
-      RequestContext.getEntityManager()!.getRepository(DeltaHash);
+    this.deltaHashRepository = entityManager.getRepository(DeltaHash);
   }
 
   async createDataset(
@@ -40,11 +40,13 @@ export class DatasetService {
   ) {
     validateSchema(schema);
 
-    const dataset = this.datasetRepository.createDataset({
+    const dataset = await this.datasetRepository.createDataset({
       name,
       schema,
       description,
     });
+
+    console.log(initialData);
 
     if (initialData && initialData.length > 0) {
       await this.logDelta(dataset.datasetId, initialData, {
@@ -86,13 +88,16 @@ export class DatasetService {
 
     const newVersion = latestHash?.version ?? 1;
 
-    const timestamp = new Date().toISOString();
+    const timestamp = new Date();
 
     let totalRecords = preparedData.length;
 
     if (latestHash?.hash) {
-      // fetch currentData
-      const currentData: any[] = [];
+      const nexusService = new NexusService();
+
+      let context = await nexusService.retrieveData(latestHash.hash);
+
+      const currentData: any[] = context.getData();
 
       const delta = DeltaUtils.createDelta(
         currentData,
@@ -100,7 +105,7 @@ export class DatasetService {
         newVersion,
         {
           generatePatches: options.generatePatches ?? true,
-          idField: options.idField || "id",
+          idField: options.idField,
         },
       );
 
@@ -111,7 +116,7 @@ export class DatasetService {
       hash = await this.storeDataToIPFS(preparedData);
     }
 
-    let deltaHash = this.deltaHashRepository.log({
+    let deltaHash = await this.deltaHashRepository.log({
       dataset,
       hash,
       timestamp,
@@ -135,7 +140,7 @@ export class DatasetService {
     data.forEach(async (value, index) => {
       if (validateSchemaData(schema, value)) {
         let output = await this.convert(schema, value);
-        data[index] = output;
+        data[index] = { ...output, id: randomUUID() };
       }
     });
 
